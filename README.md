@@ -1,46 +1,95 @@
 # OmniView — Universal Device Simulator
 
-Free, open-source Manifest V3 Chrome Extension for responsive web testing across **both emerging-market devices** (Itel, Tecno, Infinix, Oppo, Xiaomi/Redmi) and **international flagships** (Apple iPhone, Samsung Galaxy, Google Pixel, iPads, Laptops, Macs, and Smart TVs) — with **zero PRO paywalls**.
+**Free, open-source Manifest V3 Chrome Extension** for responsive web testing across **both emerging-market devices** (Itel, Tecno, Infinix, Oppo, Xiaomi/Redmi) and **international flagships** (Apple iPhone, Samsung Galaxy, Google Pixel, iPads, Laptops, Macs, and Smart TVs) — with **zero PRO paywalls**.
+
+> **[Download OmniView v1.1 Extension (.zip — 117 KB)](https://github.com/David-mwas/OmniView/raw/main/omniview-extension-v1.1.zip)** — Ready to load unpacked in Chrome, Brave, or Edge in 30 seconds (no Node.js required).
+
+---
+
+## OmniView in Action
+
+### Zen Presentation Mode — Multi-Device Comparison (Itel A70 + iPhone 15 Pro + Galaxy Tab S9)
+![OmniView Zen Presentation Mode](docs/screenshots/zen-mode-comparison.jpg)
+
+### Minimal Studio Mode — Phone & Tablet Side-by-Side with Floating Rail
+![OmniView Minimal Studio Mode](docs/screenshots/minimal-studio-mobile-tablet.jpg)
+
+### Pro Developer Toolbar — 36+ Device Library, Live Sync & Breakpoint Badges
+![OmniView Pro Toolbar and Device Library](docs/screenshots/pro-toolbar-library.jpg)
+
+### Smart TV & Desktop Mode — 1080p TV Overscan Safe-Area Guides, iMac 24" & MacBook Pro 14"
+![OmniView Smart TV and Desktop Comparison](docs/screenshots/smart-tv-desktop-overscan.jpg)
+
+---
+
+## Quick Install (No Coding Tools Needed)
+
+1. **[Download `omniview-extension-v1.1.zip`](https://github.com/David-mwas/OmniView/raw/main/omniview-extension-v1.1.zip)** and **unzip / extract** it into a permanent folder.
+2. Open Chrome (or Brave / Edge) and go to `chrome://extensions`.
+3. Enable **Developer mode** (toggle in the top-right corner).
+4. Click **Load unpacked** (top-left) and select the extracted folder (the one containing `manifest.json`).
+5. Pin **OmniView** from your browser's Extensions menu, then click the OmniView icon on any website to launch the simulator!
+
+---
 
 ## Key Features
 
-- **36+ Built-In Devices + Custom Device Manager**: Includes popular local & emerging-market phones (Itel A70, P55 5G, S23+, Tecno Spark 20/30C, Camon 30, Phantom V Fold, Infinix Hot 40, Note 40 Pro, Oppo A18, Reno 11, Redmi 13C, Note 13 Pro) alongside flagship phones, tablets, laptops, desktops, and 720p/1080p/4K Smart TVs. Switch between **Compact List** and **Visual Device Grid** views, star favorites, add/edit/delete custom devices, and import/export JSON.
-- **Multi-Device Comparison + Real-Time Live Sync**: Compare up to **6 devices side-by-side** with **Live Sync** powered by an isolated iframe bridge ([syncBridge.ts](./src/content/syncBridge.ts)) — scrolling, navigating between pages (MPA & SPA), clicking menus/buttons/tabs, and typing in search/form inputs on one device mirror in real time across all other devices!
-- **Realistic OS Status Bars & Mobile Browser Chrome**: Toggle authentic iOS Safari (bottom bar, Dynamic Island/notch, status bar) and Android Chrome (top address bar, 100% battery, punch-hole/waterdrop) overlays with a single click (`OS UI`).
-- **Run on Live Physical Device (Offline QR Code + LAN IP Helper)**: Click **Live Device** (top bar, right rail, or any device card) to generate an instant offline QR code for the exact live page you're inspecting — with automatic `localhost`/`127.0.0.1` LAN IP rewriting so your physical phone, tablet, or TV on the same Wi-Fi can open your local dev server in one scan.
-- **Minimal Studio Mode, 16 Living Studio Themes & Choreographed Motion**: Opens in a calm, distraction-free Minimal Studio layout with smooth slide-in sidebar drawer, accordion Pro Toolbar, staggered device entrance & smooth exit animations, 3D physical orientation rotate transitions, hover-reveal controls, a floating right quick-action rail, **16 Living Themes across 4 Collections** (*Minimal*, *Cosmos & Space* with twinkling stars/shooting stars/solar eclipse, *Marine & Aquatic* with caustic water rays & rising bubbles, and *Nature* with northern aurora ribbons, drifting fireflies & falling sakura petals), plus **4 Animation Feel Presets** (*Silk*, *Spring*, *Snappy*, *Calm*).
-- **Zen Presentation Mode & Keyboard Shortcuts**: Hit `Shift+Z` to hide all toolbars for clean client demos, `Ctrl/Cmd+K` to jump to device search, `Shift+S` to toggle Live Sync, and `Shift+R` to reload all frames.
+- **36+ Built-In Devices + Custom Device Manager**: Includes popular local & emerging-market phones (**Itel** A70/P55 5G/S23+, **Tecno** Spark 20/30C/Camon 30/Phantom V Fold/MegaPad, **Infinix** Hot 40/Note 40 Pro, **Oppo** A18/Reno 11, **Xiaomi** Redmi 13C/Note 13 Pro) alongside **Apple iPhone/iPad/Mac**, **Samsung Galaxy**, **Google Pixel**, **Laptops**, and **720p/1080p/4K Smart TVs**. Switch between **Compact List** and **Visual Device Grid** views, star favorites, add/edit/delete custom devices, and import/export JSON.
+- **Multi-Device Comparison + Real-Time Live Sync**: Compare up to **6 devices side-by-side** with **Live Sync** ([syncBridge.ts](src/content/syncBridge.ts)) — scrolling, navigating between pages (MPA & SPA), clicking menus/buttons/tabs, and typing in search/form inputs on one device mirror in real time across all other devices.
+- **Run on Live Physical Device (Offline QR Code + LAN IP Helper)**: Click **Live Device** to generate an instant offline QR code for the exact live page you're inspecting — with automatic `localhost`/`127.0.0.1` LAN IP rewriting so your physical phone, tablet, or TV on the same Wi-Fi opens your local dev server in one scan.
+- **Realistic OS Status Bars & Mobile Browser Chrome**: Toggle authentic iOS Safari (bottom address bar, Dynamic Island/notch, status bar) and Android Chrome (top address bar, 100% battery, punch-hole/waterdrop) overlays with one click (`OS UI`).
+- **Minimal Studio Mode, 16 Living Studio Themes & Choreographed Motion**:
+  - Clean Minimal Studio default with smooth slide-in sidebar drawer, accordion Pro Toolbar (`Tools`), floating right quick-action rail, staggered device entrance & smooth exit animations, and physical **3D orientation rotation** transitions.
+  - **16 Living Themes across 4 Collections**: *Minimal* (Obsidian, Graphite, Pure Paper, Warm Sand), *Cosmos & Space* (Deep Space, Nebula Nova, Solar Eclipse, Cyber Grid), *Marine & Aquatic* (Abyssal Sea, Coral Lagoon, Bioluminescent, Arctic Frost), and *Nature* (Aurora, Sunset Velvet, Mystic Forest, Sakura Bloom).
+  - **4 Animation Feel Presets**: *Silk*, *Spring*, *Snappy*, and *Calm*.
 - **Mockup Screenshot Studio & Full-Page Scrolling Capture**:
-  - **Full-Page Scrolling Capture**: Automatically scrolls the target device from top to bottom and stitches the entire page into one crisp image.
-  - **Mockup Studio**: Wrap any capture (single device, raw viewport, full page, or comparison grid) in designer gradient/solid/transparent backdrops with adjustable padding, corner radius, drop shadow, custom device captions, and export as **PNG**, **JPEG**, **WebP**, or **Copy to Clipboard**.
-- **Universal MP4 (H.264) & WebM Screen Recorder + Built-In Preview Player**:
-  - Prioritizes **MP4 (H.264)** when supported by Chrome (with WebM H.264 and VP9/VP8 options), selectable quality bitrate (**Standard / High HD / Ultra**), optional tab audio, and Region Capture (`CropTarget.fromElement`) with full-tab fallback.
-  - Opens a built-in **Recording Preview Modal** upon stopping so you can play back and verify your video before downloading.
-- **Honest Compatibility Mode & User-Agent Override**:
-  - **Standard Mode (Default)**, **Opt-In Tab-Scoped Compatibility Mode** (strips `X-Frame-Options` and `Content-Security-Policy` strictly for `sub_frame` requests in the simulator tab), and **External Preview Fallback**.
-  - Session-scoped User-Agent override (per-device in Single Mode, shared UA selector in Multi-Device Mode).
+  - **Full-Page Scrolling Capture**: Automatically scrolls the target device from top to bottom and stitches the entire page into one seamless image.
+  - **Mockup Studio**: Wrap any capture (single device, raw viewport, full page, or comparison grid) in designer gradient/solid/transparent backdrops with adjustable padding, corner radius, drop shadow, and custom captions, then export as **PNG**, **JPEG**, **WebP**, or **Copy to Clipboard**.
+- **Universal MP4 (H.264) & WebM Screen Recorder + Built-In Preview Player**: Prioritizes **MP4 (H.264)** when supported by Chrome (with WebM H.264 and VP9/VP8 options), selectable quality bitrate (*Standard / High HD / Ultra*), optional tab audio, Region Capture (`CropTarget.fromElement`) with full-tab fallback, and an instant built-in **Recording Preview Modal** before downloading.
 - **Developer & Smart TV Testing Tools**: Toggleable Tailwind (`xs`–`2xl`) & Bootstrap (`xs`–`xxl`) breakpoint inspector, pixel ruler overlay, touch cursor indicator, TV 5% / 10% overscan safe-area guides, TV landscape lock, and an on-screen D-Pad Remote HUD.
 
-## Setup, Test & Build
+---
+
+## Understanding Compatibility Mode (`Compat` Flag)
+
+Many live websites (such as YouTube, Google, news portals, and SaaS dashboards) send `X-Frame-Options` or `Content-Security-Policy: frame-ancestors` headers that block them from rendering inside a simulator `<iframe>`.
+
+OmniView solves this using **tab-scoped `declarativeNetRequest` session rules**:
+
+- **ON by Default (Recommended for Everyday Previewing)**: When you open an OmniView simulator tab, `Compat: ON` is enabled automatically **strictly for sub-frames inside that simulator tab's `tabId`**. It never affects your normal browsing tabs, and Chrome automatically removes the rules the moment you close the OmniView tab.
+- **When to Turn `Compat` OFF**: Open **Tools → Compat: OFF** if you are specifically testing how your own site's strict `CSP` / `X-Frame-Options` headers behave in standard iframe embedding, or if you want zero header modification on your local dev server.
+- **When a Site Still Refuses to Load**: A small number of websites use JavaScript frame-busters, strict `SameSite` auth cookies, or Service Worker cached CSP headers that cannot be bypassed by header rules. For those sites, click the **External Preview** (`↗`) icon on any device card or scan the **Live Device** QR code to test on a physical phone.
+
+---
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+| :--- | :--- |
+| `Ctrl + K` / `Cmd + K` | Open & focus Device Library search |
+| `Shift + S` | Toggle Real-Time Live Sync (Compare Mode) |
+| `Shift + Z` | Toggle Zen Presentation Mode |
+| `Shift + R` | Reload all active devices |
+
+---
+
+## Development Setup, Tests & Build
 
 ```bash
+git clone https://github.com/David-mwas/OmniView.git
+cd OmniView
 npm install
 npm run test
 npm run build
 ```
 
-## Load Unpacked in Chrome
+Then load the generated `dist/` folder via `chrome://extensions` → **Developer mode** → **Load unpacked**.
 
-1. Run `npm run build` to generate the `dist/` folder.
-2. Open Chrome and navigate to `chrome://extensions`.
-3. Enable **Developer mode** (top-right toggle).
-4. Click **Load unpacked** (or click the **Reload** icon on OmniView if already loaded) and select the `dist/` directory.
-5. Click the **OmniView** toolbar icon on any website to launch the simulator workspace.
+---
 
 ## Known Browser & API Limitations
 
-- **Rendering Engine**: Changing the User-Agent header does not replace Chrome's Blink rendering engine with iOS Safari, Android WebView, or native Smart TV engines.
-- **Compatibility Mode is Best-Effort**: Stripping `X-Frame-Options` and `Content-Security-Policy` allows many production websites to load inside iframes, but sites using JavaScript frame-busters, strict `SameSite` cookies, or Service Worker cached CSP headers may still refuse embedding. Use the **External Preview** button on any device card for those sites.
+- **Rendering Engine**: Changing the User-Agent header does not replace Chrome's Blink rendering engine with iOS Safari, Android WebView, or native Smart TV engines. Use **Run on Live Device** to verify engine-specific behavior on real hardware.
 - **Multi-Device User-Agent**: Chrome's `declarativeNetRequest` scopes session rules to `tabId`, not individual `<iframe>` elements. Single Device Mode applies the active device's UA; Multi-Device Mode applies one shared UA across the tab.
 - **Privacy**: OmniView is 100% local-first (`chrome.storage.local` & `chrome.storage.session`) with no backend, no analytics, and no external data transmission.
 
