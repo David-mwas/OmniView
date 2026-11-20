@@ -9,18 +9,23 @@
 ## OmniView in Action
 
 ### Zen Presentation Mode — Multi-Device Comparison (Itel A70 + iPhone 15 Pro + Galaxy Tab S9)
+
 ![OmniView Zen Presentation Mode](docs/screenshots/zen-mode-comparison.jpg)
 
 ### Minimal Studio Mode — Phone & Tablet Side-by-Side with Floating Rail
+
 ![OmniView Minimal Studio Mode](docs/screenshots/minimal-studio-mobile-tablet.jpg)
 
 ### Pro Developer Toolbar — 36+ Device Library, Live Sync & Breakpoint Badges
+
 ![OmniView Pro Toolbar and Device Library](docs/screenshots/pro-toolbar-library.jpg)
 
 ### Smart TV & Desktop Mode — 1080p TV Overscan Safe-Area Guides, iMac 24" & MacBook Pro 14"
+
 ![OmniView Smart TV and Desktop Comparison](docs/screenshots/smart-tv-desktop-overscan.jpg)
 
 ### Zen Mode — Landscape Smart TV + Rotated Portrait Display on Abyssal Sea Theme
+
 ![OmniView Zen Smart TV and Portrait Comparison](docs/screenshots/zen-tv-portrait-landscape.jpg)
 
 ---
@@ -42,15 +47,19 @@
 ## OmniView in Action
 
 ### Zen Presentation Mode — Multi-Device Comparison (Itel A70 + iPhone 15 Pro + Galaxy Tab S9)
+
 ![OmniView Zen Presentation Mode](docs/screenshots/zen-mode-comparison.jpg)
 
 ### Minimal Studio Mode — Phone & Tablet Side-by-Side with Floating Rail
+
 ![OmniView Minimal Studio Mode](docs/screenshots/minimal-studio-mobile-tablet.jpg)
 
 ### Pro Developer Toolbar — 36+ Device Library, Live Sync & Breakpoint Badges
+
 ![OmniView Pro Toolbar and Device Library](docs/screenshots/pro-toolbar-library.jpg)
 
 ### Smart TV & Desktop Mode — 1080p TV Overscan Safe-Area Guides, iMac 24" & MacBook Pro 14"
+
 ![OmniView Smart TV and Desktop Comparison](docs/screenshots/smart-tv-desktop-overscan.jpg)
 
 ---
@@ -73,12 +82,12 @@
 - **Realistic OS Status Bars & Mobile Browser Chrome**: Toggle authentic iOS Safari (bottom address bar, Dynamic Island/notch, status bar) and Android Chrome (top address bar, 100% battery, punch-hole/waterdrop) overlays with one click (`OS UI`).
 - **Minimal Studio Mode, 16 Living Studio Themes & Choreographed Motion**:
   - Clean Minimal Studio default with smooth slide-in sidebar drawer, accordion Pro Toolbar (`Tools`), floating right quick-action rail, staggered device entrance & smooth exit animations, and physical **3D orientation rotation** transitions.
-  - **16 Living Themes across 4 Collections**: *Minimal* (Obsidian, Graphite, Pure Paper, Warm Sand), *Cosmos & Space* (Deep Space, Nebula Nova, Solar Eclipse, Cyber Grid), *Marine & Aquatic* (Abyssal Sea, Coral Lagoon, Bioluminescent, Arctic Frost), and *Nature* (Aurora, Sunset Velvet, Mystic Forest, Sakura Bloom).
-  - **4 Animation Feel Presets**: *Silk*, *Spring*, *Snappy*, and *Calm*.
+  - **16 Living Themes across 4 Collections**: _Minimal_ (Obsidian, Graphite, Pure Paper, Warm Sand), _Cosmos & Space_ (Deep Space, Nebula Nova, Solar Eclipse, Cyber Grid), _Marine & Aquatic_ (Abyssal Sea, Coral Lagoon, Bioluminescent, Arctic Frost), and _Nature_ (Aurora, Sunset Velvet, Mystic Forest, Sakura Bloom).
+  - **4 Animation Feel Presets**: _Silk_, _Spring_, _Snappy_, and _Calm_.
 - **Mockup Screenshot Studio & Full-Page Scrolling Capture**:
   - **Full-Page Scrolling Capture**: Automatically scrolls the target device from top to bottom and stitches the entire page into one seamless image.
   - **Mockup Studio**: Wrap any capture (single device, raw viewport, full page, or comparison grid) in designer gradient/solid/transparent backdrops with adjustable padding, corner radius, drop shadow, and custom captions, then export as **PNG**, **JPEG**, **WebP**, or **Copy to Clipboard**.
-- **Universal MP4 (H.264) & WebM Screen Recorder + Built-In Preview Player**: Prioritizes **MP4 (H.264)** when supported by Chrome (with WebM H.264 and VP9/VP8 options), selectable quality bitrate (*Standard / High HD / Ultra*), optional tab audio, Region Capture (`CropTarget.fromElement`) with full-tab fallback, and an instant built-in **Recording Preview Modal** before downloading.
+- **Universal MP4 (H.264) & WebM Screen Recorder + Built-In Preview Player**: Prioritizes **MP4 (H.264)** when supported by Chrome (with WebM H.264 and VP9/VP8 options), selectable quality bitrate (_Standard / High HD / Ultra_), optional tab audio, Region Capture (`CropTarget.fromElement`) with full-tab fallback, and an instant built-in **Recording Preview Modal** before downloading.
 - **Developer & Smart TV Testing Tools**: Toggleable Tailwind (`xs`–`2xl`) & Bootstrap (`xs`–`xxl`) breakpoint inspector, pixel ruler overlay, touch cursor indicator, TV 5% / 10% overscan safe-area guides, TV landscape lock, and an on-screen D-Pad Remote HUD.
 
 ---
@@ -97,12 +106,12 @@ OmniView solves this using **tab-scoped `declarativeNetRequest` session rules**:
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-| :--- | :--- |
-| `Ctrl + K` / `Cmd + K` | Open & focus Device Library search |
-| `Shift + S` | Toggle Real-Time Live Sync (Compare Mode) |
-| `Shift + Z` | Toggle Zen Presentation Mode |
-| `Shift + R` | Reload all active devices |
+| Shortcut               | Action                                    |
+| :--------------------- | :---------------------------------------- |
+| `Ctrl + K` / `Cmd + K` | Open & focus Device Library search        |
+| `Shift + S`            | Toggle Real-Time Live Sync (Compare Mode) |
+| `Shift + Z`            | Toggle Zen Presentation Mode              |
+| `Shift + R`            | Reload all active devices                 |
 
 ---
 
