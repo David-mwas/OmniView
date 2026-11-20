@@ -60,7 +60,7 @@ describe("MV3 Session Manager & DNR Rule Lifecycle", () => {
     expect(s2.tabId).toBe(202);
     expect(s1.compatRuleId).not.toBe(s2.compatRuleId);
     expect(s1.uaRuleId).not.toBe(s2.uaRuleId);
-    expect(s1.compatibilityMode).toBe(false);
+    expect(s1.compatibilityMode).toBe(true);
     expect(s1.userAgent).toBeNull();
   });
 

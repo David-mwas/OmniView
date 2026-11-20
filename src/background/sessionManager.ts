@@ -35,7 +35,7 @@ export async function getOrCreateSession(tabId: number): Promise<SimulatorSessio
     tabId,
     compatRuleId,
     uaRuleId,
-    compatibilityMode: false,
+    compatibilityMode: true,
     userAgent: null,
     createdAt: Date.now(),
   };

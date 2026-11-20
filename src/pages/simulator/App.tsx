@@ -110,8 +110,9 @@ export const App: React.FC = () => {
   ]);
   const [zoom, setZoom] = useState<ZoomOption>("auto");
 
-  // Session-scoped DNR state
-  const [compatibilityMode, setCompatibilityMode] = useState(false);
+  // Session-scoped DNR state (default enabled for seamless live-site previews in this simulator tab only)
+  const [sessionReady, setSessionReady] = useState(false);
+  const [compatibilityMode, setCompatibilityMode] = useState(true);
   const [singleUaEnabled, setSingleUaEnabled] = useState(false);
   const [multiUaPreset, setMultiUaPreset] = useState<SharedUAPreset>("off");
 
@@ -343,6 +344,7 @@ export const App: React.FC = () => {
       if (res.ok && "session" in res) {
         setCompatibilityMode(res.session.compatibilityMode);
       }
+      setSessionReady(true);
     })();
   }, []);
 
@@ -963,7 +965,7 @@ export const App: React.FC = () => {
             ref={gridRef}
             className="relative z-10 mx-auto flex min-h-full flex-wrap items-center justify-center gap-10 pr-10"
           >
-            {activeInstances.map((inst, idx) => {
+            {sessionReady && activeInstances.map((inst, idx) => {
               const device = deviceMap.get(inst.deviceId);
               if (!device) return null;
               return (

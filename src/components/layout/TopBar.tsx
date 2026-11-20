@@ -912,8 +912,8 @@ export const TopBar: React.FC<TopBarProps> = ({
       </div>
       </div>
 
-      {/* Subtle Compatibility Mode disclosure bar (Smooth Accordion) */}
-      <div className="accordion-shell" data-open={compatibilityMode ? "true" : "false"}>
+      {/* Subtle Compatibility Mode disclosure bar (shown in Pro Toolbar) */}
+      <div className="accordion-shell" data-open={isProBar && compatibilityMode ? "true" : "false"}>
         <div className="accordion-inner">
           <div className="flex items-center justify-between border-t border-amber-500/20 bg-amber-500/10 px-4 py-1 text-[11px] text-amber-600 dark:text-amber-300">
             <span>
