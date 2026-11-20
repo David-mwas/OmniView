@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OmniView Responsive Demo Page</title>
+    <style>
+      :root {
+        --bg: #09090b;
+        --card: #18181b;
+        --border: #27272a;
+        --text: #fafafa;
+        --muted: #a1a1aa;
+        --accent: #6366f1;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+        padding: 16px;
+      }
+      .container { max-width: 1200px; margin: 0 auto; }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 20px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        margin-bottom: 20px;
+      }
+      .brand { font-weight: 700; font-size: 1.15rem; display: flex; align-items: center; gap: 8px; }
+      .pill {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(99, 102, 241, 0.15);
+        color: #a5b4fc;
+        border: 1px solid rgba(99, 102, 241, 0.35);
+        font-family: ui-monospace, monospace;
+      }
+      .hero {
+        padding: 28px 24px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(99,102,241,0.18), rgba(16,185,129,0.12));
+        border: 1px solid var(--border);
+        margin-bottom: 20px;
+      }
+      .hero h1 { font-size: clamp(1.4rem, 3.5vw, 2.5rem); margin-bottom: 8px; }
+      .hero p { color: var(--muted); max-width: 65ch; font-size: 0.95rem; }
+      .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+      button.btn {
+        background: var(--accent);
+        color: white;
+        border: 2px solid transparent;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: transform 0.15s, border-color 0.15s;
+      }
+      button.btn.secondary {
+        background: #27272a;
+        color: #e4e4e7;
+      }
+      button.btn:focus {
+        outline: none;
+        border-color: #34d399;
+        transform: scale(1.04);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+      @media (min-width: 640px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      @media (min-width: 1024px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+      }
+      .card:focus {
+        outline: 2px solid #34d399;
+        outline-offset: 2px;
+      }
+      .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+      .value { font-size: 1.25rem; font-weight: 700; margin-top: 4px; font-family: ui-monospace, monospace; }
+      .ua-box {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px 16px;
+        font-family: ui-monospace, monospace;
+        font-size: 0.78rem;
+        color: #d4d4d8;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div class="brand">OmniView Demo Site</div>
+        <span class="pill" id="bp-pill">Detecting...</span>
+      </header>
+      <section class="hero">
+        <h1>Test Responsive Layouts Instantly</h1>
+        <p>
+          Resize, rotate, compare emerging-market and flagship devices side-by-side, or test Smart TV D-Pad focus navigation with Arrow keys &amp; Enter.
+        </p>
+        <div class="actions">
+          <button class="btn" id="btn-primary" tabindex="0">Primary Action</button>
+          <button class="btn secondary" id="btn-secondary" tabindex="0">Secondary Action</button>
+          <button class="btn secondary" id="btn-counter" tabindex="0">Clicks: 0</button>
+        </div>
+      </section>
+      <section class="grid">
+        <div class="card" tabindex="0">
+          <div class="label">Viewport</div>
+          <div class="value" id="v-size">—</div>
+        </div>
+        <div class="card" tabindex="0">
+          <div class="label">Device Pixel Ratio</div>
+          <div class="value" id="v-dpr">—</div>
+        </div>
+        <div class="card" tabindex="0">
+          <div class="label">Orientation</div>
+          <div class="value" id="v-orient">—</div>
+        </div>
+        <div class="card" tabindex="0">
+          <div class="label">Last Key</div>
+          <div class="value" id="v-key">None</div>
+        </div>
+      </section>
+      <div class="ua-box">
+        <div class="label" style="margin-bottom: 6px;">navigator.userAgent</div>
+        <div id="v-ua"></div>
+      </div>
+    </div>
+    <script>
+      let clicks = 0;
+      function updateMetrics() {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        document.getElementById("v-size").textContent = w + " × " + h;
+        document.getElementById("v-dpr").textContent = window.devicePixelRatio.toFixed(2) + "x";
+        document.getElementById("v-orient").textContent = w >= h ? "Landscape" : "Portrait";
+        document.getElementById("v-ua").textContent = navigator.userAgent;
+        const bp = w >= 1536 ? "2xl" : w >= 1280 ? "xl" : w >= 1024 ? "lg" : w >= 768 ? "md" : w >= 640 ? "sm" : "xs";
+        document.getElementById("bp-pill").textContent = "TW: " + bp + " • " + w + "px";
+      }
+      updateMetrics();
+      window.addEventListener("resize", updateMetrics);
+      document.getElementById("btn-counter").addEventListener("click", (e) => {
+        clicks++;
+        e.target.textContent = "Clicks: " + clicks;
+      });
+      window.addEventListener("keydown", (e) => {
+        document.getElementById("v-key").textContent = e.key;
+        if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key)) {
+          const focusables = Array.from(document.querySelectorAll("button, .card"));
+          const idx = focusables.indexOf(document.activeElement);
+          if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+            focusables[(idx + 1) % focusables.length]?.focus();
+          } else {
+            focusables[(idx - 1 + focusables.length) % focusables.length]?.focus();
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
