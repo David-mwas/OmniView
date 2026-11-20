@@ -20,6 +20,9 @@
 ### Smart TV & Desktop Mode — 1080p TV Overscan Safe-Area Guides, iMac 24" & MacBook Pro 14"
 ![OmniView Smart TV and Desktop Comparison](docs/screenshots/smart-tv-desktop-overscan.jpg)
 
+### Zen Mode — Landscape Smart TV + Rotated Portrait Display on Abyssal Sea Theme
+![OmniView Zen Smart TV and Portrait Comparison](docs/screenshots/zen-tv-portrait-landscape.jpg)
+
 ---
 
 ## Quick Install (No Coding Tools Needed)
