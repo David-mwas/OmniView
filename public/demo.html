@@ -146,36 +146,6 @@
         <div id="v-ua"></div>
       </div>
     </div>
-    <script>
-      let clicks = 0;
-      function updateMetrics() {
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        document.getElementById("v-size").textContent = w + " × " + h;
-        document.getElementById("v-dpr").textContent = window.devicePixelRatio.toFixed(2) + "x";
-        document.getElementById("v-orient").textContent = w >= h ? "Landscape" : "Portrait";
-        document.getElementById("v-ua").textContent = navigator.userAgent;
-        const bp = w >= 1536 ? "2xl" : w >= 1280 ? "xl" : w >= 1024 ? "lg" : w >= 768 ? "md" : w >= 640 ? "sm" : "xs";
-        document.getElementById("bp-pill").textContent = "TW: " + bp + " • " + w + "px";
-      }
-      updateMetrics();
-      window.addEventListener("resize", updateMetrics);
-      document.getElementById("btn-counter").addEventListener("click", (e) => {
-        clicks++;
-        e.target.textContent = "Clicks: " + clicks;
-      });
-      window.addEventListener("keydown", (e) => {
-        document.getElementById("v-key").textContent = e.key;
-        if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key)) {
-          const focusables = Array.from(document.querySelectorAll("button, .card"));
-          const idx = focusables.indexOf(document.activeElement);
-          if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-            focusables[(idx + 1) % focusables.length]?.focus();
-          } else {
-            focusables[(idx - 1 + focusables.length) % focusables.length]?.focus();
-          }
-        }
-      });
-    </script>
+    <script src="demo.js"></script>
   </body>
 </html>

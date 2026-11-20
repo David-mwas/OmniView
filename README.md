@@ -35,6 +35,36 @@
 
 ---
 
+> **[Download OmniView v1.1 Extension (.zip — 117 KB)](https://github.com/David-mwas/OmniView/raw/main/omniview-extension-v1.1.zip)** — Ready to load unpacked in Chrome, Brave, or Edge in 30 seconds (no Node.js required).
+
+---
+
+## OmniView in Action
+
+### Zen Presentation Mode — Multi-Device Comparison (Itel A70 + iPhone 15 Pro + Galaxy Tab S9)
+![OmniView Zen Presentation Mode](docs/screenshots/zen-mode-comparison.jpg)
+
+### Minimal Studio Mode — Phone & Tablet Side-by-Side with Floating Rail
+![OmniView Minimal Studio Mode](docs/screenshots/minimal-studio-mobile-tablet.jpg)
+
+### Pro Developer Toolbar — 36+ Device Library, Live Sync & Breakpoint Badges
+![OmniView Pro Toolbar and Device Library](docs/screenshots/pro-toolbar-library.jpg)
+
+### Smart TV & Desktop Mode — 1080p TV Overscan Safe-Area Guides, iMac 24" & MacBook Pro 14"
+![OmniView Smart TV and Desktop Comparison](docs/screenshots/smart-tv-desktop-overscan.jpg)
+
+---
+
+## Quick Install (No Coding Tools Needed)
+
+1. **[Download `omniview-extension-v1.1.zip`](https://github.com/David-mwas/OmniView/raw/main/omniview-extension-v1.1.zip)** and **unzip / extract** it into a permanent folder.
+2. Open Chrome (or Brave / Edge) and go to `chrome://extensions`.
+3. Enable **Developer mode** (toggle in the top-right corner).
+4. Click **Load unpacked** (top-left) and select the extracted folder (the one containing `manifest.json`).
+5. Pin **OmniView** from your browser's Extensions menu, then click the OmniView icon on any website to launch the simulator!
+
+---
+
 ## Key Features
 
 - **36+ Built-In Devices + Custom Device Manager**: Includes popular local & emerging-market phones (**Itel** A70/P55 5G/S23+, **Tecno** Spark 20/30C/Camon 30/Phantom V Fold/MegaPad, **Infinix** Hot 40/Note 40 Pro, **Oppo** A18/Reno 11, **Xiaomi** Redmi 13C/Note 13 Pro) alongside **Apple iPhone/iPad/Mac**, **Samsung Galaxy**, **Google Pixel**, **Laptops**, and **720p/1080p/4K Smart TVs**. Switch between **Compact List** and **Visual Device Grid** views, star favorites, add/edit/delete custom devices, and import/export JSON.

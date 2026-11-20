@@ -40,7 +40,11 @@ export function resolveVideoCodec(preference: VideoFormatPreference): {
   const isSupported = (m: string) =>
     typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(m);
 
+  // Prefer avc3 over avc1 so dynamic resolution changes (e.g. rotating/resizing during recording) never error
   const mp4Candidates = [
+    "video/mp4;codecs=avc3.42E01E,mp4a.40.2",
+    "video/mp4;codecs=avc3.42E01E",
+    "video/mp4;codecs=avc3",
     "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
     "video/mp4;codecs=avc1.42E01E",
     "video/mp4;codecs=avc1",
