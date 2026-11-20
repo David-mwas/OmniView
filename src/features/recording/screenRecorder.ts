@@ -32,7 +32,10 @@ export function isRegionCaptureSupported(): boolean {
   );
 }
 
-export function resolveVideoCodec(preference: VideoFormatPreference): {
+export function resolveVideoCodec(
+  preference: VideoFormatPreference,
+  includeAudio = false
+): {
   mimeType: string;
   extension: "mp4" | "webm";
   codecLabel: string;
@@ -40,26 +43,51 @@ export function resolveVideoCodec(preference: VideoFormatPreference): {
   const isSupported = (m: string) =>
     typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(m);
 
-  // Prefer avc3 over avc1 so dynamic resolution changes (e.g. rotating/resizing during recording) never error
-  const mp4Candidates = [
-    "video/mp4;codecs=avc3.42E01E,mp4a.40.2",
-    "video/mp4;codecs=avc3.42E01E",
-    "video/mp4;codecs=avc3",
-    "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
-    "video/mp4;codecs=avc1.42E01E",
-    "video/mp4;codecs=avc1",
-    "video/mp4",
-  ];
-  const webmH264Candidates = [
-    "video/webm;codecs=h264,opus",
-    "video/webm;codecs=h264",
-  ];
-  const webmVpCandidates = [
-    "video/webm;codecs=vp9,opus",
-    "video/webm;codecs=vp9",
-    "video/webm;codecs=vp8,opus",
-    "video/webm",
-  ];
+  // avc3 supports dynamic resolution changes (tab resize / Region Capture) without Chromium's avc1 warning
+  const avc3Mp4Candidates = includeAudio
+    ? [
+        "video/mp4;codecs=avc3,mp4a.40.2",
+        "video/mp4;codecs=avc3.42001f,mp4a.40.2",
+        "video/mp4;codecs=avc3.4d002a,mp4a.40.2",
+        "video/mp4;codecs=avc3.640028,mp4a.40.2",
+        "video/mp4;codecs=avc3.42E01E,mp4a.40.2",
+      ]
+    : [
+        "video/mp4;codecs=avc3",
+        "video/mp4;codecs=avc3.42001f",
+        "video/mp4;codecs=avc3.4d002a",
+        "video/mp4;codecs=avc3.640028",
+        "video/mp4;codecs=avc3.42E01E",
+      ];
+
+  const avc1Mp4Candidates = includeAudio
+    ? [
+        "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+        "video/mp4;codecs=avc1,mp4a.40.2",
+        "video/mp4",
+      ]
+    : [
+        "video/mp4;codecs=avc1.42E01E",
+        "video/mp4;codecs=avc1",
+        "video/mp4",
+      ];
+
+  const webmH264Candidates = includeAudio
+    ? ["video/webm;codecs=h264,opus", "video/webm;codecs=h264"]
+    : ["video/webm;codecs=h264"];
+
+  const webmVpCandidates = includeAudio
+    ? [
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp8,opus",
+        "video/webm;codecs=vp9",
+        "video/webm",
+      ]
+    : [
+        "video/webm;codecs=vp9",
+        "video/webm;codecs=vp8",
+        "video/webm",
+      ];
 
   const tryList = (
     list: string[],
@@ -74,11 +102,20 @@ export function resolveVideoCodec(preference: VideoFormatPreference): {
     return null;
   };
 
-  if (preference === "mp4" || preference === "auto") {
-    const mp4 = tryList(mp4Candidates, "mp4", "MP4 (H.264)");
-    if (mp4) return mp4;
+  if (preference === "auto") {
+    const avc3 = tryList(avc3Mp4Candidates, "mp4", "MP4 (H.264 avc3)");
+    if (avc3) return avc3;
     const h264Webm = tryList(webmH264Candidates, "webm", "WebM (H.264)");
     if (h264Webm) return h264Webm;
+    const vp = tryList(webmVpCandidates, "webm", "WebM (VP9/VP8)");
+    if (vp) return vp;
+  }
+
+  if (preference === "mp4") {
+    const avc3 = tryList(avc3Mp4Candidates, "mp4", "MP4 (H.264 avc3)");
+    if (avc3) return avc3;
+    const avc1 = tryList(avc1Mp4Candidates, "mp4", "MP4 (H.264 avc1)");
+    if (avc1) return avc1;
   }
 
   if (preference === "webm_h264") {
@@ -180,7 +217,10 @@ export class OmniScreenRecorder {
         }
       }
 
-      const resolved = resolveVideoCodec(options.formatPreference ?? "auto");
+      const resolved = resolveVideoCodec(
+        options.formatPreference ?? "auto",
+        Boolean(options.includeAudio)
+      );
       const videoBitsPerSecond = getBitrateBps(options.quality ?? "high");
 
       this.chunks = [];
