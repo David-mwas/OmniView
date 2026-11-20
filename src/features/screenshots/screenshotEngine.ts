@@ -11,6 +11,20 @@ export type StudioBackgroundId =
   | "paper"
   | "transparent";
 
+export type StudioAspectRatio = "auto" | "16:9" | "1:1" | "4:5" | "9:16";
+export type AnnotationTool = "none" | "arrow" | "rect" | "blur";
+
+export interface StudioAnnotation {
+  id: string;
+  type: Exclude<AnnotationTool, "none">;
+  /** Normalized 0..1 coordinates relative to the final canvas */
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+}
+
 export interface StudioStyleOptions {
   background: StudioBackgroundId;
   padding: number;
@@ -18,6 +32,8 @@ export interface StudioStyleOptions {
   shadow: boolean;
   caption: string;
   showCaption: boolean;
+  aspectRatio: StudioAspectRatio;
+  annotations: StudioAnnotation[];
 }
 
 export const STUDIO_BACKGROUNDS: Record<
@@ -300,8 +316,20 @@ export async function renderStudioCanvas(
   const pad = style.padding;
   const captionHeight = style.showCaption && style.caption.trim() ? 48 : 0;
 
-  const outW = img.naturalWidth + pad * 2;
-  const outH = img.naturalHeight + pad * 2 + captionHeight;
+  let outW = img.naturalWidth + pad * 2;
+  let outH = img.naturalHeight + pad * 2 + captionHeight;
+
+  // Enforce optional social / presentation aspect ratio while keeping full capture centered
+  if (style.aspectRatio && style.aspectRatio !== "auto") {
+    const [rw, rh] = style.aspectRatio.split(":").map(Number);
+    const targetRatio = rw / rh;
+    const currentRatio = outW / outH;
+    if (currentRatio < targetRatio) {
+      outW = Math.round(outH * targetRatio);
+    } else if (currentRatio > targetRatio) {
+      outH = Math.round(outW / targetRatio);
+    }
+  }
 
   const canvas = document.createElement("canvas");
   canvas.width = outW;
@@ -322,17 +350,16 @@ export async function renderStudioCanvas(
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, outW, outH);
   } else if (format === "jpeg") {
-    // JPEG does not support transparency
     ctx.fillStyle = "#09090b";
     ctx.fillRect(0, 0, outW, outH);
   }
 
-  // Draw rounded shadow + image
-  const r = Math.min(style.borderRadius, img.naturalWidth / 4, img.naturalHeight / 4);
-  const x = pad;
-  const y = pad;
+  // Center the captured image cleanly inside the canvas
   const w = img.naturalWidth;
   const h = img.naturalHeight;
+  const x = Math.round((outW - w) / 2);
+  const y = Math.round((outH - captionHeight - h) / 2);
+  const r = Math.min(style.borderRadius, w / 4, h / 4);
 
   if (style.shadow) {
     ctx.save();
@@ -353,14 +380,77 @@ export async function renderStudioCanvas(
   ctx.drawImage(img, x, y, w, h);
   ctx.restore();
 
+  // Render interactive annotations (blur boxes, highlight rects, arrows)
+  for (const ann of style.annotations ?? []) {
+    const ax1 = ann.x1 * outW;
+    const ay1 = ann.y1 * outH;
+    const ax2 = ann.x2 * outW;
+    const ay2 = ann.y2 * outH;
+    const rx = Math.min(ax1, ax2);
+    const ry = Math.min(ay1, ay2);
+    const rw = Math.abs(ax2 - ax1);
+    const rh = Math.abs(ay2 - ay1);
+
+    if (ann.type === "blur" && rw > 4 && rh > 4) {
+      // Pixelate/blur region to cleanly redact sensitive data
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(rx, ry, rw, rh, 6);
+      ctx.clip();
+      ctx.filter = "blur(14px)";
+      ctx.drawImage(canvas, rx, ry, rw, rh, rx, ry, rw, rh);
+      ctx.filter = "none";
+      ctx.fillStyle = "rgba(15, 23, 42, 0.25)";
+      ctx.fillRect(rx, ry, rw, rh);
+      ctx.restore();
+    } else if (ann.type === "rect" && rw > 4 && rh > 4) {
+      ctx.save();
+      ctx.strokeStyle = ann.color;
+      ctx.lineWidth = Math.max(3, Math.round(outW / 280));
+      ctx.beginPath();
+      ctx.roundRect(rx, ry, rw, rh, 8);
+      ctx.stroke();
+      ctx.restore();
+    } else if (ann.type === "arrow") {
+      const headLen = Math.max(14, Math.round(outW / 55));
+      const angle = Math.atan2(ay2 - ay1, ax2 - ax1);
+      ctx.save();
+      ctx.strokeStyle = ann.color;
+      ctx.fillStyle = ann.color;
+      ctx.lineWidth = Math.max(3.5, Math.round(outW / 240));
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(ax1, ay1);
+      ctx.lineTo(ax2, ay2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(ax2, ay2);
+      ctx.lineTo(
+        ax2 - headLen * Math.cos(angle - Math.PI / 6),
+        ay2 - headLen * Math.sin(angle - Math.PI / 6)
+      );
+      ctx.lineTo(
+        ax2 - headLen * Math.cos(angle + Math.PI / 6),
+        ay2 - headLen * Math.sin(angle + Math.PI / 6)
+      );
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
   if (captionHeight > 0) {
     ctx.save();
-    ctx.font = '600 18px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.font =
+      '600 18px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.fillStyle =
-      style.background === "paper" ? "rgba(15, 23, 42, 0.85)" : "rgba(255, 255, 255, 0.9)";
+      style.background === "paper"
+        ? "rgba(15, 23, 42, 0.85)"
+        : "rgba(255, 255, 255, 0.9)";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(style.caption.trim(), outW / 2, pad + h + captionHeight / 2 + 4);
+    ctx.fillText(style.caption.trim(), outW / 2, outH - captionHeight / 2);
     ctx.restore();
   }
 

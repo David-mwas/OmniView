@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "OmniView — Universal Device Simulator",
-  "version": "1.1.0",
-  "description": "Free, open-source responsive device simulator supporting emerging-market (Itel, Tecno, Infinix, Oppo, Redmi) and flagship phones, tablets, laptops, Macs, and Smart TVs with Sync Scroll, Mockup Studio & MP4 Recording.",
+  "version": "1.2.0",
+  "description": "Free, open-source responsive device simulator with 55+ devices, Live Sync, Vision & X-Ray QA, Mockup Studio Annotations, MP4 Trim & Live Device QR.",
   "minimum_chrome_version": "116",
   "permissions": [
     "declarativeNetRequest",

@@ -13,6 +13,7 @@ import {
   Gamepad2,
   Wand2,
   QrCode,
+  AlertTriangle,
 } from "lucide-react";
 import type { ActiveDeviceInstance, Device } from "../../types/device";
 import { FrameRenderer } from "../frames/FrameRenderer";
@@ -38,6 +39,11 @@ interface DeviceCardProps {
   ambientGlowColor: string | null;
   hoverLift: boolean;
   isExiting?: boolean;
+  xrayMode: boolean;
+  visionFilterCss: string;
+  overflowPx: number;
+  onHistoryBack: (instanceId: string) => void;
+  onHistoryForward: (instanceId: string) => void;
   onOpenLiveDevice: () => void;
   onRegisterIframe: (instanceId: string, iframe: HTMLIFrameElement | null) => void;
   onRotate: (instanceId: string) => void;
@@ -73,6 +79,11 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   ambientGlowColor,
   hoverLift,
   isExiting = false,
+  xrayMode,
+  visionFilterCss,
+  overflowPx,
+  onHistoryBack,
+  onHistoryForward,
   onOpenLiveDevice,
   onRegisterIframe,
   onRotate,
@@ -134,6 +145,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         instanceId: instance.instanceId,
         syncScroll,
         syncInteractions: syncScroll,
+        xrayMode,
         currentUrl: liveUrl,
       },
       "*"
@@ -217,6 +229,14 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               <span className="font-mono text-[10px] text-zinc-500">
                 {viewWidth}×{viewHeight}
               </span>
+              {overflowPx > 2 && (
+                <span
+                  className="inline-flex items-center gap-0.5 rounded border border-red-500/40 bg-red-500/15 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-red-400"
+                  title={`Horizontal overflow detected: page is ${overflowPx}px wider than this ${viewWidth}px viewport! Enable X-Ray Outlines to highlight the offending element.`}
+                >
+                  <AlertTriangle className="h-2.5 w-2.5" />+{overflowPx}px
+                </span>
+              )}
               {!minimalHeader && (
                 <span
                   className={`rounded border px-1.5 py-0.5 text-[9px] font-medium uppercase ${accuracyColor}`}
@@ -416,6 +436,9 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             orientation={isLandscape ? "landscape" : "portrait"}
             width={viewWidth}
             height={viewHeight}
+            onBack={() => onHistoryBack(instance.instanceId)}
+            onForward={() => onHistoryForward(instance.instanceId)}
+            onReload={() => onReload(instance.instanceId)}
           >
             <div
               ref={viewportWrapperRef}
@@ -423,6 +446,11 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               className={`relative h-full w-full bg-white ${
                 touchCursor ? "cursor-none" : ""
               }`}
+              style={
+                visionFilterCss !== "none"
+                  ? { filter: visionFilterCss }
+                  : undefined
+              }
               onMouseMove={(e) => {
                 if (!touchCursor) return;
                 const rect = e.currentTarget.getBoundingClientRect();

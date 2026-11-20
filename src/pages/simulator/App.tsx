@@ -18,6 +18,12 @@ import {
   type StudioAppearance,
 } from "../../types/theme";
 import {
+  VISION_FILTERS,
+  type CompareLayoutMode,
+  type VisionFilterId,
+} from "../../types/devtools";
+import { VisionFiltersSvg } from "../../features/devtools/VisionFilters";
+import {
   loadAppearance,
   loadDevices,
   loadRecentDeviceIds,
@@ -122,6 +128,10 @@ export const App: React.FC = () => {
   const [showBreakpoints, setShowBreakpoints] = useState(true);
   const [showRuler, setShowRuler] = useState(false);
   const [touchCursor, setTouchCursor] = useState(false);
+  const [xrayMode, setXrayMode] = useState(false);
+  const [visionFilter, setVisionFilter] = useState<VisionFilterId>("none");
+  const [compareLayout, setCompareLayout] = useState<CompareLayoutMode>("grid");
+  const [overflowMap, setOverflowMap] = useState<Record<string, number>>({});
 
   // Modals & HUDs
   const [customModalOpen, setCustomModalOpen] = useState(false);
@@ -184,6 +194,14 @@ export const App: React.FC = () => {
     const onMessage = (ev: MessageEvent) => {
       const data = ev.data;
       if (!data || typeof data !== "object" || data.__omniview !== true) return;
+      if (data.type === "OMNIVIEW_OVERFLOW_STATUS" && typeof data.instanceId === "string") {
+        const px = Number(data.overflowPx) || 0;
+        setOverflowMap((prev) =>
+          prev[data.instanceId] === px ? prev : { ...prev, [data.instanceId]: px }
+        );
+        return;
+      }
+
       if (!syncScroll) return;
 
       if (data.type === "OMNIVIEW_SCROLL_EVENT") {
@@ -278,6 +296,16 @@ export const App: React.FC = () => {
       );
     }
   }, [syncScroll, activeInstances]);
+
+  // Notify all iframes whenever X-Ray mode toggles
+  useEffect(() => {
+    for (const iframe of iframeRegistryRef.current.values()) {
+      iframe.contentWindow?.postMessage(
+        { __omniview: true, type: "OMNIVIEW_SET_XRAY", enabled: xrayMode },
+        "*"
+      );
+    }
+  }, [xrayMode, activeInstances]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -818,10 +846,47 @@ export const App: React.FC = () => {
     }, 220);
   };
 
+  const handleHistoryBack = (targetInstanceId?: string) => {
+    if (targetInstanceId && !syncScroll) {
+      iframeRegistryRef.current
+        .get(targetInstanceId)
+        ?.contentWindow?.postMessage(
+          { __omniview: true, type: "OMNIVIEW_HISTORY_BACK" },
+          "*"
+        );
+      return;
+    }
+    for (const iframe of iframeRegistryRef.current.values()) {
+      iframe.contentWindow?.postMessage(
+        { __omniview: true, type: "OMNIVIEW_HISTORY_BACK" },
+        "*"
+      );
+    }
+  };
+
+  const handleHistoryForward = (targetInstanceId?: string) => {
+    if (targetInstanceId && !syncScroll) {
+      iframeRegistryRef.current
+        .get(targetInstanceId)
+        ?.contentWindow?.postMessage(
+          { __omniview: true, type: "OMNIVIEW_HISTORY_FORWARD" },
+          "*"
+        );
+      return;
+    }
+    for (const iframe of iframeRegistryRef.current.values()) {
+      iframe.contentWindow?.postMessage(
+        { __omniview: true, type: "OMNIVIEW_HISTORY_FORWARD" },
+        "*"
+      );
+    }
+  };
+
   const activeBackdrop = CANVAS_BACKDROPS[appearance.backdrop] ?? CANVAS_BACKDROPS.obsidian;
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-zinc-100 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <VisionFiltersSvg />
       <TopBar
         visible={!zenMode}
         sidebarOpen={sidebarOpen}
@@ -837,6 +902,9 @@ export const App: React.FC = () => {
           showBreakpoints={showBreakpoints}
           showRuler={showRuler}
           touchCursor={touchCursor}
+          xrayMode={xrayMode}
+          visionFilter={visionFilter}
+          compareLayout={compareLayout}
           theme={theme}
           appearance={appearance}
           presets={PRESET_GROUPS}
@@ -846,6 +914,27 @@ export const App: React.FC = () => {
           videoFormat={videoFormat}
           videoQuality={videoQuality}
           onToggleSidebar={() => setSidebarOpen((o) => !o)}
+          onHistoryBack={() => handleHistoryBack()}
+          onHistoryForward={() => handleHistoryForward()}
+          onToggleXray={() => {
+            setXrayMode((x) => {
+              const next = !x;
+              pushToast(
+                next
+                  ? "X-Ray Outlines ON — overflowing elements are highlighted in red."
+                  : "X-Ray Outlines OFF.",
+                "info"
+              );
+              return next;
+            });
+          }}
+          onVisionFilterChange={(f) => {
+            setVisionFilter(f);
+            pushToast(`Vision Simulator: ${VISION_FILTERS[f].label}`, "info");
+          }}
+          onToggleCompareLayout={() =>
+            setCompareLayout((l) => (l === "grid" ? "row" : "grid"))
+          }
           onOpenLiveDevice={() => setLiveDeviceOpen(true)}
           onChangeAppearance={handleChangeAppearance}
           onUrlInputChange={setUrlInput}
@@ -963,7 +1052,11 @@ export const App: React.FC = () => {
 
           <div
             ref={gridRef}
-            className="relative z-10 mx-auto flex min-h-full flex-wrap items-center justify-center gap-10 pr-10"
+            className={`relative z-10 mx-auto flex min-h-full items-center gap-10 pr-10 ${
+              viewMode === "multi" && compareLayout === "row"
+                ? "w-max flex-nowrap justify-start px-4"
+                : "flex-wrap justify-center"
+            }`}
           >
             {sessionReady && activeInstances.map((inst, idx) => {
               const device = deviceMap.get(inst.deviceId);
@@ -990,6 +1083,11 @@ export const App: React.FC = () => {
                   }
                   hoverLift={appearance.hoverLift}
                   isExiting={exitingIds.has(inst.instanceId)}
+                  xrayMode={xrayMode}
+                  visionFilterCss={VISION_FILTERS[visionFilter].cssFilter}
+                  overflowPx={overflowMap[inst.instanceId] ?? 0}
+                  onHistoryBack={(id) => handleHistoryBack(id)}
+                  onHistoryForward={(id) => handleHistoryForward(id)}
                   onOpenLiveDevice={() => setLiveDeviceOpen(true)}
                   onRegisterIframe={handleRegisterIframe}
                   onRotate={(id) =>

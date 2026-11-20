@@ -29,9 +29,19 @@ import {
   Palette,
   SlidersHorizontal,
   QrCode,
+  ArrowLeft,
+  ArrowRight,
+  Eye,
+  BoxSelect,
+  Columns,
 } from "lucide-react";
 import type { PresetGroup, SharedUAPreset, Workspace } from "../../types/device";
 import type { StudioAppearance } from "../../types/theme";
+import {
+  VISION_FILTERS,
+  type CompareLayoutMode,
+  type VisionFilterId,
+} from "../../types/devtools";
 import { SHARED_USER_AGENTS } from "../../data/devices";
 import { StudioThemeMenu } from "./StudioThemeMenu";
 import {
@@ -59,6 +69,9 @@ interface TopBarProps {
   showBreakpoints: boolean;
   showRuler: boolean;
   touchCursor: boolean;
+  xrayMode: boolean;
+  visionFilter: VisionFilterId;
+  compareLayout: CompareLayoutMode;
   theme: "dark" | "light";
   appearance: StudioAppearance;
   presets: PresetGroup[];
@@ -68,6 +81,11 @@ interface TopBarProps {
   videoFormat: VideoFormatPreference;
   videoQuality: VideoQualityPreset;
   onToggleSidebar: () => void;
+  onHistoryBack: () => void;
+  onHistoryForward: () => void;
+  onToggleXray: () => void;
+  onVisionFilterChange: (filter: VisionFilterId) => void;
+  onToggleCompareLayout: () => void;
   onOpenLiveDevice: () => void;
   onChangeAppearance: (patch: Partial<StudioAppearance>) => void;
   onUrlInputChange: (val: string) => void;
@@ -118,6 +136,9 @@ export const TopBar: React.FC<TopBarProps> = ({
   showBreakpoints,
   showRuler,
   touchCursor,
+  xrayMode,
+  visionFilter,
+  compareLayout,
   theme,
   appearance,
   presets,
@@ -127,6 +148,11 @@ export const TopBar: React.FC<TopBarProps> = ({
   videoFormat,
   videoQuality,
   onToggleSidebar,
+  onHistoryBack,
+  onHistoryForward,
+  onToggleXray,
+  onVisionFilterChange,
+  onToggleCompareLayout,
   onOpenLiveDevice,
   onChangeAppearance,
   onUrlInputChange,
@@ -159,7 +185,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onToggleTheme,
 }) => {
   const [openMenu, setOpenMenu] = useState<
-    null | "presets" | "workspaces" | "screenshot" | "record" | "ua" | "theme"
+    null | "presets" | "workspaces" | "screenshot" | "record" | "ua" | "theme" | "vision"
   >(null);
   const [workspaceName, setWorkspaceName] = useState("");
   const menuContainerRef = useRef<HTMLDivElement>(null);
@@ -225,11 +251,29 @@ export const TopBar: React.FC<TopBarProps> = ({
           </div>
         </div>
 
-        {/* URL Form */}
+        {/* URL Form + Back/Forward History */}
         <form
           onSubmit={handleUrlSubmit}
           className="flex min-w-[240px] flex-1 items-center gap-1.5"
         >
+          <div className="hidden sm:flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={onHistoryBack}
+              className="micro-btn rounded-lg border border-zinc-300 p-1.5 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+              title="Navigate Back inside Devices"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={onHistoryForward}
+              className="micro-btn rounded-lg border border-zinc-300 p-1.5 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+              title="Navigate Forward inside Devices"
+            >
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
           <div className="relative flex-1">
             <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
             <input
@@ -415,6 +459,22 @@ export const TopBar: React.FC<TopBarProps> = ({
                 <Unlink2 className="h-3.5 w-3.5" />
               )}
               <span>Live Sync: {syncScroll ? "ON" : "OFF"}</span>
+            </button>
+          )}
+
+          {/* Compare Layout Mode (Grid vs Side-by-Side Row Strip) */}
+          {viewMode === "multi" && (
+            <button
+              onClick={onToggleCompareLayout}
+              className={`micro-btn flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium ${
+                compareLayout === "row"
+                  ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-500 dark:text-indigo-300"
+                  : "border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+              }`}
+              title="Toggle Comparison Layout: Grid Wrap vs Horizontal Side-by-Side Row"
+            >
+              <Columns className="h-3.5 w-3.5" />
+              <span>{compareLayout === "row" ? "Row Strip" : "Grid"}</span>
             </button>
           )}
 
@@ -857,6 +917,71 @@ export const TopBar: React.FC<TopBarProps> = ({
           </div>
 
           <div className="mx-0.5 h-4 w-px bg-zinc-300 dark:bg-zinc-800" />
+
+          {/* Vision & Accessibility Simulator Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() =>
+                setOpenMenu(openMenu === "vision" ? null : "vision")
+              }
+              className={`micro-btn flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium ${
+                visionFilter !== "none"
+                  ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-500 dark:text-emerald-300"
+                  : "border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+              }`}
+              title="Accessibility & Vision Simulator (Color Blindness, Blurred Vision, Low Contrast)"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              <span className="hidden lg:inline">
+                {visionFilter === "none"
+                  ? "Vision"
+                  : VISION_FILTERS[visionFilter].label.split(" ")[0]}
+              </span>
+            </button>
+            {openMenu === "vision" && (
+              <div className="animate-popover-down absolute right-0 top-full mt-1.5 w-64 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
+                {(Object.keys(VISION_FILTERS) as VisionFilterId[]).map((id) => {
+                  const meta = VISION_FILTERS[id];
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => {
+                        onVisionFilterChange(id);
+                        setOpenMenu(null);
+                      }}
+                      className={`w-full rounded-lg px-2.5 py-1.5 text-left transition ${
+                        visionFilter === id
+                          ? "bg-indigo-600 text-white"
+                          : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                      }`}
+                    >
+                      <div className="text-xs font-medium">{meta.label}</div>
+                      <div
+                        className={`text-[10px] ${
+                          visionFilter === id ? "text-indigo-100" : "text-zinc-500"
+                        }`}
+                      >
+                        {meta.description}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* X-Ray Layout Outlines & Overflow Highlighter */}
+          <button
+            onClick={onToggleXray}
+            className={`micro-btn rounded-lg border p-1.5 ${
+              xrayMode
+                ? "border-red-500/50 bg-red-500/15 text-red-400"
+                : "border-zinc-300 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            }`}
+            title="X-Ray Mode: Outline all DOM boxes & highlight horizontal overflow elements in red"
+          >
+            <BoxSelect className="h-3.5 w-3.5" />
+          </button>
 
           {/* OS Chrome Toggle */}
           <button

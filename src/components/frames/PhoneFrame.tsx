@@ -1,5 +1,5 @@
 import React from "react";
-import { Wifi, BatteryFull, Signal, Lock, RotateCw, Share, BookOpen, Copy, ChevronLeft, ChevronRight, Home } from "lucide-react";
+import { Wifi, BatteryFull, Signal, Lock, RotateCw, Share, BookOpen, Copy, ChevronLeft, ChevronRight } from "lucide-react";
 import type { FrameType, Orientation } from "../../types/device";
 
 interface PhoneFrameProps {
@@ -10,6 +10,9 @@ interface PhoneFrameProps {
   orientation: Orientation;
   width: number;
   height: number;
+  onBack?: () => void;
+  onForward?: () => void;
+  onReload?: () => void;
   children: React.ReactNode;
 }
 
@@ -31,6 +34,9 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
   orientation,
   width,
   height,
+  onBack,
+  onForward,
+  onReload,
   children,
 }) => {
   const isLandscape = orientation === "landscape";
@@ -93,14 +99,26 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
           {/* Android Chrome Top Address Bar */}
           {!isLandscape && showOsChrome && !isIos && (
             <div className="flex h-10 shrink-0 items-center gap-2 border-b border-zinc-800/80 bg-zinc-900 px-3 text-zinc-300">
-              <Home className="h-3.5 w-3.5 text-zinc-400" />
+              <button
+                type="button"
+                onClick={onBack}
+                className="rounded p-0.5 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                title="Back"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
               <div className="flex flex-1 items-center gap-1.5 rounded-full bg-zinc-800/90 px-3 py-1 text-[11px] text-zinc-200">
                 <Lock className="h-2.5 w-2.5 text-emerald-400" />
                 <span className="truncate">{hostname}</span>
               </div>
-              <div className="flex h-4 w-4 items-center justify-center rounded border border-zinc-500 text-[9px] font-bold">
-                1
-              </div>
+              <button
+                type="button"
+                onClick={onReload}
+                className="rounded p-0.5 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                title="Reload"
+              >
+                <RotateCw className="h-3 w-3" />
+              </button>
             </div>
           )}
 
@@ -140,14 +158,35 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
                   <Lock className="h-2.5 w-2.5 text-zinc-400" />
                   <span className="truncate">{hostname}</span>
                 </div>
-                <RotateCw className="h-3 w-3 text-zinc-400" />
+                <button
+                  type="button"
+                  onClick={onReload}
+                  className="text-zinc-400 hover:text-white"
+                  title="Reload"
+                >
+                  <RotateCw className="h-3 w-3" />
+                </button>
               </div>
               <div className="mt-2 flex items-center justify-around text-zinc-400">
-                <ChevronLeft className="h-4 w-4" />
-                <ChevronRight className="h-4 w-4 opacity-40" />
-                <Share className="h-3.5 w-3.5" />
-                <BookOpen className="h-3.5 w-3.5" />
-                <Copy className="h-3.5 w-3.5" />
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="rounded p-0.5 hover:text-white"
+                  title="Back"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={onForward}
+                  className="rounded p-0.5 hover:text-white"
+                  title="Forward"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+                <Share className="h-3.5 w-3.5 opacity-60" />
+                <BookOpen className="h-3.5 w-3.5 opacity-60" />
+                <Copy className="h-3.5 w-3.5 opacity-60" />
               </div>
               <div className="mx-auto mt-2 h-1 w-28 rounded-full bg-zinc-500/70" />
             </div>

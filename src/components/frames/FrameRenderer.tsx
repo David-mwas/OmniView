@@ -14,6 +14,9 @@ interface FrameRendererProps {
   orientation: Orientation;
   width: number;
   height: number;
+  onBack?: () => void;
+  onForward?: () => void;
+  onReload?: () => void;
   children: React.ReactNode;
 }
 
@@ -26,6 +29,9 @@ export const FrameRenderer: React.FC<FrameRendererProps> = ({
   orientation,
   width,
   height,
+  onBack,
+  onForward,
+  onReload,
   children,
 }) => {
   if (!showFrame || frameType === "none") {
@@ -53,6 +59,9 @@ export const FrameRenderer: React.FC<FrameRendererProps> = ({
           orientation={orientation}
           width={width}
           height={height}
+          onBack={onBack}
+          onForward={onForward}
+          onReload={onReload}
         >
           {children}
         </PhoneFrame>

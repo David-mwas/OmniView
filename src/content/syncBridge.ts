@@ -22,6 +22,65 @@
   let scrollRaf: number | null = null;
   let lastReportedUrl = window.location.href;
   let urlPollInterval: number | null = null;
+  let xrayEnabled = false;
+
+  const XRAY_STYLE_ID = "__omniview_xray_style__";
+
+  function applyXray(enabled: boolean) {
+    xrayEnabled = enabled;
+    const existing = document.getElementById(XRAY_STYLE_ID);
+    if (!enabled) {
+      existing?.remove();
+      document
+        .querySelectorAll("[data-omniview-overflow]")
+        .forEach((el) => el.removeAttribute("data-omniview-overflow"));
+      return;
+    }
+
+    if (!existing) {
+      const style = document.createElement("style");
+      style.id = XRAY_STYLE_ID;
+      style.textContent = `
+        * { outline: 1px solid rgba(99, 102, 241, 0.32) !important; }
+        [data-omniview-overflow="true"] {
+          outline: 2px solid #ef4444 !important;
+          background-color: rgba(239, 68, 68, 0.12) !important;
+        }
+      `;
+      (document.head || document.documentElement).appendChild(style);
+    }
+
+    const vw = document.documentElement.clientWidth || window.innerWidth;
+    document.querySelectorAll("*").forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.right > vw + 2) {
+        el.setAttribute("data-omniview-overflow", "true");
+      } else {
+        el.removeAttribute("data-omniview-overflow");
+      }
+    });
+  }
+
+  function reportOverflowStatus() {
+    if (!instanceId) return;
+    const docEl = document.documentElement;
+    const body = document.body;
+    const clientWidth = docEl?.clientWidth || window.innerWidth || 1;
+    const scrollWidth = Math.max(
+      docEl?.scrollWidth ?? 0,
+      body?.scrollWidth ?? 0
+    );
+    const overflowPx = Math.max(0, Math.round(scrollWidth - clientWidth));
+    postToParent({
+      type: "OMNIVIEW_OVERFLOW_STATUS",
+      instanceId,
+      hasOverflow: overflowPx > 2,
+      overflowPx,
+    });
+    if (xrayEnabled) {
+      applyXray(true);
+    }
+  }
 
   function normalizeHref(href: string): string {
     try {
@@ -239,6 +298,7 @@
   }
 
   window.addEventListener("scroll", handleLocalScroll, { passive: true });
+  window.addEventListener("resize", reportOverflowStatus, { passive: true });
   window.addEventListener("popstate", checkUrlChange);
   window.addEventListener("hashchange", checkUrlChange);
   document.addEventListener("click", handleLocalClick, true);
@@ -266,6 +326,8 @@
           syncInteractionsEnabled = Boolean(data.syncInteractions);
           lastReportedUrl = window.location.href;
           startUrlWatcher();
+          applyXray(Boolean(data.xrayMode));
+          window.setTimeout(reportOverflowStatus, 180);
 
           postToParent({
             type: "OMNIVIEW_READY",
@@ -295,6 +357,24 @@
         if (typeof data.syncInteractions === "boolean") {
           syncInteractionsEnabled = data.syncInteractions;
         }
+        break;
+      }
+
+      case "OMNIVIEW_SET_XRAY": {
+        applyXray(Boolean(data.enabled));
+        reportOverflowStatus();
+        break;
+      }
+
+      case "OMNIVIEW_HISTORY_BACK": {
+        window.history.back();
+        window.setTimeout(checkUrlChange, 150);
+        break;
+      }
+
+      case "OMNIVIEW_HISTORY_FORWARD": {
+        window.history.forward();
+        window.setTimeout(checkUrlChange, 150);
         break;
       }
 

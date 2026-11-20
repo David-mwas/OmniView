@@ -23,11 +23,11 @@ const VALID_FRAME_TYPES = new Set([
 const VALID_ACCURACY = new Set(["verified", "estimated", "custom"]);
 
 describe("Device Library Schema & Integrity", () => {
-  it("contains at least 35 pre-seeded devices", () => {
-    expect(BUILTIN_DEVICES.length).toBeGreaterThanOrEqual(35);
+  it("contains at least 50 pre-seeded devices", () => {
+    expect(BUILTIN_DEVICES.length).toBeGreaterThanOrEqual(50);
   });
 
-  it("includes emerging-market brands alongside international flagships", () => {
+  it("includes emerging-market and regional brands alongside international flagships", () => {
     const brands = new Set(BUILTIN_DEVICES.map((d) => d.brand));
     for (const required of [
       "Itel",
@@ -35,6 +35,13 @@ describe("Device Library Schema & Integrity", () => {
       "Infinix",
       "Oppo",
       "Xiaomi",
+      "Huawei",
+      "Vivo",
+      "Realme",
+      "Nokia",
+      "Nothing",
+      "Motorola",
+      "OnePlus",
       "Apple",
       "Samsung",
       "Google",

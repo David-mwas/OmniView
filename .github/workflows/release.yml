@@ -1,0 +1,54 @@
+name: Build & Release OmniView Extension
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck & Unit Tests
+        run: |
+          npx tsc --noEmit
+          npm run test
+
+      - name: Build production extension
+        run: npm run build
+
+      - name: Package extension zip
+        run: |
+          VERSION="${GITHUB_REF_NAME:-dev}"
+          (cd dist && zip -r "../omniview-extension-${VERSION}.zip" .)
+          echo "ZIP_NAME=omniview-extension-${VERSION}.zip" >> "$GITHUB_ENV"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIP_NAME }}
+          path: ${{ env.ZIP_NAME }}
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP_NAME }}
+          generate_release_notes: true
