@@ -20,9 +20,15 @@ import {
 import {
   VISION_FILTERS,
   type CompareLayoutMode,
+  type DesignOverlayConfig,
+  type PageAuditData,
+  type TextScaleOption,
+  type TiltMode,
   type VisionFilterId,
 } from "../../types/devtools";
 import { VisionFiltersSvg } from "../../features/devtools/VisionFilters";
+import { CommandPalette } from "../../features/devtools/CommandPalette";
+import { PageInspectorDrawer } from "../../features/devtools/PageInspectorDrawer";
 import {
   loadAppearance,
   loadDevices,
@@ -129,9 +135,28 @@ export const App: React.FC = () => {
   const [showRuler, setShowRuler] = useState(false);
   const [touchCursor, setTouchCursor] = useState(false);
   const [xrayMode, setXrayMode] = useState(false);
+  const [touchAudit, setTouchAudit] = useState(false);
+  const [rtlMode, setRtlMode] = useState(false);
+  const [textScale, setTextScale] = useState<TextScaleOption>(1);
+  const [showColumnGrid, setShowColumnGrid] = useState(false);
+  const [showSafeArea, setShowSafeArea] = useState(false);
+  const [showKeyboard, setShowKeyboard] = useState(false);
+  const [tiltMode, setTiltMode] = useState<TiltMode>("flat");
+  const [freeformResize, setFreeformResize] = useState(false);
+  const [dualUrlMode, setDualUrlMode] = useState(false);
+  const [overrideUrls, setOverrideUrls] = useState<Record<string, string>>({});
+  const [customCss, setCustomCss] = useState("");
+  const [designOverlay, setDesignOverlay] = useState<DesignOverlayConfig>({
+    dataUrl: null,
+    opacity: 0.45,
+    blendMode: "normal",
+  });
   const [visionFilter, setVisionFilter] = useState<VisionFilterId>("none");
   const [compareLayout, setCompareLayout] = useState<CompareLayoutMode>("grid");
   const [overflowMap, setOverflowMap] = useState<Record<string, number>>({});
+  const [auditMap, setAuditMap] = useState<Record<string, PageAuditData>>({});
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
 
   // Modals & HUDs
   const [customModalOpen, setCustomModalOpen] = useState(false);
@@ -199,6 +224,13 @@ export const App: React.FC = () => {
         setOverflowMap((prev) =>
           prev[data.instanceId] === px ? prev : { ...prev, [data.instanceId]: px }
         );
+        return;
+      }
+
+      if (data.type === "OMNIVIEW_AUDIT_RESULT" && typeof data.instanceId === "string" && data.audit) {
+        const auditData = data.audit as PageAuditData;
+        setAuditMap((prev) => ({ ...prev, [data.instanceId]: auditData }));
+        setOverflowMap((prev) => ({ ...prev, [data.instanceId]: auditData.overflowPx }));
         return;
       }
 
@@ -297,7 +329,7 @@ export const App: React.FC = () => {
     }
   }, [syncScroll, activeInstances]);
 
-  // Notify all iframes whenever X-Ray mode toggles
+  // Broadcast v2 DevTools states (X-Ray, Touch Audit, Custom CSS, RTL & Text Scale)
   useEffect(() => {
     for (const iframe of iframeRegistryRef.current.values()) {
       iframe.contentWindow?.postMessage(
@@ -307,6 +339,33 @@ export const App: React.FC = () => {
     }
   }, [xrayMode, activeInstances]);
 
+  useEffect(() => {
+    for (const iframe of iframeRegistryRef.current.values()) {
+      iframe.contentWindow?.postMessage(
+        { __omniview: true, type: "OMNIVIEW_SET_TOUCH_AUDIT", enabled: touchAudit },
+        "*"
+      );
+    }
+  }, [touchAudit, activeInstances]);
+
+  useEffect(() => {
+    for (const iframe of iframeRegistryRef.current.values()) {
+      iframe.contentWindow?.postMessage(
+        { __omniview: true, type: "OMNIVIEW_SET_CUSTOM_CSS", css: customCss },
+        "*"
+      );
+    }
+  }, [customCss, activeInstances]);
+
+  useEffect(() => {
+    for (const iframe of iframeRegistryRef.current.values()) {
+      iframe.contentWindow?.postMessage(
+        { __omniview: true, type: "OMNIVIEW_SET_A11Y_STRESS", rtl: rtlMode, textScale },
+        "*"
+      );
+    }
+  }, [rtlMode, textScale, activeInstances]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -315,6 +374,12 @@ export const App: React.FC = () => {
         target?.tagName === "INPUT" ||
         target?.tagName === "TEXTAREA" ||
         target?.tagName === "SELECT";
+
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        setCommandOpen((o) => !o);
+        return;
+      }
 
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -882,6 +947,84 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleRefreshAudit = () => {
+    for (const iframe of iframeRegistryRef.current.values()) {
+      iframe.contentWindow?.postMessage(
+        { __omniview: true, type: "OMNIVIEW_RUN_AUDIT" },
+        "*"
+      );
+    }
+    pushToast("Scanning page DNA, SEO, vitals & QA metrics...", "info");
+  };
+
+  const handleBatchCaptureAll = async () => {
+    pushToast(`Batch capturing ${activeInstances.length} device(s)...`, "info");
+    let count = 0;
+    for (const inst of activeInstances) {
+      const dev = deviceMap.get(inst.deviceId);
+      const el = document.querySelector<HTMLElement>(
+        `[data-device-frame="${inst.instanceId}"]`
+      );
+      if (!el) continue;
+      try {
+        const cap = await captureElementScreenshot(el, { scrollIntoView: true });
+        await exportScreenshot(cap, "download", dev?.name ?? "device");
+        count++;
+        // Respect Chrome captureVisibleTab rate limit
+        await new Promise((r) => window.setTimeout(r, 550));
+      } catch {
+        // continue with remaining devices
+      }
+    }
+    pushToast(`Batch capture complete: downloaded ${count} PNG(s)!`, "success");
+  };
+
+  const handleShareWorkspace = async () => {
+    const payload = {
+      url: liveUrl,
+      deviceIds: activeInstances.map((i) => i.deviceId),
+      backdrop: appearance.backdrop,
+    };
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    const shareText = `omniview://share/${encoded}`;
+    try {
+      await navigator.clipboard.writeText(shareText);
+      pushToast("Copied shareable OmniView workspace code to clipboard!", "success");
+    } catch {
+      pushToast("Failed to copy workspace code.", "error");
+    }
+  };
+
+  const primaryAudit = activeInstances[0]
+    ? auditMap[activeInstances[0].instanceId] ?? null
+    : null;
+  const hasQaIssues = Boolean(
+    primaryAudit &&
+      (primaryAudit.overflowPx > 2 ||
+        primaryAudit.brokenImages > 0 ||
+        primaryAudit.consoleErrors.length > 0)
+  );
+
+  const commandActions = useMemo(
+    () => [
+      { id: "inspector", label: "Open Page Inspector (DNA, SEO, CSS & QA)", run: () => { setInspectorOpen(true); handleRefreshAudit(); } },
+      { id: "live-qr", label: "Run on Live Physical Device (QR Code)", run: () => setLiveDeviceOpen(true) },
+      { id: "xray", label: `Toggle X-Ray Outlines (${xrayMode ? "ON" : "OFF"})`, run: () => setXrayMode((v) => !v) },
+      { id: "touch", label: `Toggle Touch Target Audit (${touchAudit ? "ON" : "OFF"})`, run: () => setTouchAudit((v) => !v) },
+      { id: "kbd", label: `Toggle Virtual Mobile Keyboard (${showKeyboard ? "ON" : "OFF"})`, run: () => setShowKeyboard((v) => !v) },
+      { id: "safe", label: `Toggle Safe-Area & Notch Guides (${showSafeArea ? "ON" : "OFF"})`, run: () => setShowSafeArea((v) => !v) },
+      { id: "grid", label: `Toggle Figma Column Grid (${showColumnGrid ? "ON" : "OFF"})`, run: () => setShowColumnGrid((v) => !v) },
+      { id: "rtl", label: `Toggle RTL Stress Test (${rtlMode ? "ON" : "OFF"})`, run: () => setRtlMode((v) => !v) },
+      { id: "dual", label: `Toggle Dual-URL Staging vs Prod (${dualUrlMode ? "ON" : "OFF"})`, run: () => { setViewMode("multi"); setDualUrlMode((v) => !v); } },
+      { id: "free", label: `Toggle Freeform Drag Resize (${freeformResize ? "ON" : "OFF"})`, run: () => setFreeformResize((v) => !v) },
+      { id: "batch", label: "Batch Capture All Active Devices", run: () => void handleBatchCaptureAll() },
+      { id: "fullpage", label: "Full-Page Scrolling Capture", run: () => void handleCaptureFullPage() },
+      { id: "zen", label: "Toggle Zen Presentation Mode", hint: "Shift+Z", run: () => setZenMode((z) => !z) },
+      { id: "share", label: "Copy Shareable Workspace Code", run: () => void handleShareWorkspace() },
+    ],
+    [xrayMode, touchAudit, showKeyboard, showSafeArea, showColumnGrid, rtlMode, dualUrlMode, freeformResize, activeInstances, liveUrl, appearance.backdrop]
+  );
+
   const activeBackdrop = CANVAS_BACKDROPS[appearance.backdrop] ?? CANVAS_BACKDROPS.obsidian;
 
   return (
@@ -903,6 +1046,16 @@ export const App: React.FC = () => {
           showRuler={showRuler}
           touchCursor={touchCursor}
           xrayMode={xrayMode}
+          touchAudit={touchAudit}
+          rtlMode={rtlMode}
+          textScale={textScale}
+          showColumnGrid={showColumnGrid}
+          showSafeArea={showSafeArea}
+          showKeyboard={showKeyboard}
+          tiltMode={tiltMode}
+          freeformResize={freeformResize}
+          dualUrlMode={dualUrlMode}
+          hasQaIssues={hasQaIssues}
           visionFilter={visionFilter}
           compareLayout={compareLayout}
           theme={theme}
@@ -927,6 +1080,28 @@ export const App: React.FC = () => {
               );
               return next;
             });
+          }}
+          onToggleTouchAudit={() => setTouchAudit((t) => !t)}
+          onToggleRtl={() => setRtlMode((r) => !r)}
+          onCycleTextScale={() => {
+            const order: TextScaleOption[] = [1, 1.25, 1.5, 2];
+            setTextScale((cur) => order[(order.indexOf(cur) + 1) % order.length]);
+          }}
+          onToggleColumnGrid={() => setShowColumnGrid((g) => !g)}
+          onToggleSafeArea={() => setShowSafeArea((s) => !s)}
+          onToggleKeyboard={() => setShowKeyboard((k) => !k)}
+          onCycleTilt={() => {
+            const order: TiltMode[] = ["flat", "left", "right"];
+            setTiltMode((cur) => order[(order.indexOf(cur) + 1) % order.length]);
+          }}
+          onToggleFreeformResize={() => setFreeformResize((f) => !f)}
+          onToggleDualUrl={() => setDualUrlMode((d) => !d)}
+          onBatchCaptureAll={() => void handleBatchCaptureAll()}
+          onShareWorkspace={() => void handleShareWorkspace()}
+          onOpenCommandPalette={() => setCommandOpen(true)}
+          onOpenInspector={() => {
+            setInspectorOpen(true);
+            handleRefreshAudit();
           }}
           onVisionFilterChange={(f) => {
             setVisionFilter(f);
@@ -996,15 +1171,42 @@ export const App: React.FC = () => {
           }}
         />
 
+      {/* Zen Mode Top-Edge Hover Quick Bar + Exit Pill */}
       {zenMode && (
-        <button
-          onClick={() => setZenMode(false)}
-          className="animate-scale-in micro-btn fixed right-4 top-4 z-50 flex items-center gap-1.5 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3.5 py-2 text-xs font-semibold text-zinc-100 shadow-xl backdrop-blur-md hover:bg-indigo-600"
-          title="Exit Zen Mode (Shift+Z)"
-        >
-          <Minimize2 className="h-3.5 w-3.5" />
-          Exit Zen Mode
-        </button>
+        <div className="group/zen fixed inset-x-0 top-0 z-50 flex justify-center pt-3">
+          <div className="animate-scale-in flex items-center gap-1.5 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1.5 text-xs text-zinc-100 opacity-30 shadow-2xl backdrop-blur-xl transition-opacity duration-200 hover:opacity-100 group-hover/zen:opacity-100">
+            <button
+              onClick={() => setCommandOpen(true)}
+              className="micro-btn rounded-full px-2.5 py-1 font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white"
+            >
+              ⌘P Switch
+            </button>
+            <button
+              onClick={handleRotateAll}
+              className="micro-btn rounded-full px-2.5 py-1 font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white"
+            >
+              Rotate
+            </button>
+            <button
+              onClick={() =>
+                viewMode === "multi"
+                  ? handleCaptureGrid("studio")
+                  : handleCapturePrimaryDevice("frame", "studio")
+              }
+              className="micro-btn rounded-full px-2.5 py-1 font-medium text-indigo-300 hover:bg-indigo-500/20"
+            >
+              Studio Shot
+            </button>
+            <button
+              onClick={() => setZenMode(false)}
+              className="micro-btn flex items-center gap-1 rounded-full bg-indigo-600 px-3 py-1 font-semibold text-white hover:bg-indigo-500"
+              title="Exit Zen Mode (Shift+Z)"
+            >
+              <Minimize2 className="h-3 w-3" />
+              Exit Zen
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -1084,8 +1286,26 @@ export const App: React.FC = () => {
                   hoverLift={appearance.hoverLift}
                   isExiting={exitingIds.has(inst.instanceId)}
                   xrayMode={xrayMode}
+                  touchAudit={touchAudit}
+                  customCss={customCss}
+                  rtlMode={rtlMode}
+                  textScale={textScale}
                   visionFilterCss={VISION_FILTERS[visionFilter].cssFilter}
                   overflowPx={overflowMap[inst.instanceId] ?? 0}
+                  brokenImages={auditMap[inst.instanceId]?.brokenImages ?? 0}
+                  showColumnGrid={showColumnGrid}
+                  showSafeArea={showSafeArea}
+                  showKeyboard={showKeyboard}
+                  designOverlay={designOverlay}
+                  tiltMode={tiltMode}
+                  freeformResize={freeformResize}
+                  dualUrlMode={dualUrlMode}
+                  overrideUrl={overrideUrls[inst.instanceId]}
+                  onOverrideUrlChange={(id, raw) => {
+                    const norm = normalizeUrl(raw);
+                    if (!norm) return;
+                    setOverrideUrls((prev) => ({ ...prev, [id]: norm }));
+                  }}
                   onHistoryBack={(id) => handleHistoryBack(id)}
                   onHistoryForward={(id) => handleHistoryForward(id)}
                   onOpenLiveDevice={() => setLiveDeviceOpen(true)}
@@ -1204,10 +1424,50 @@ export const App: React.FC = () => {
           }
           onStartRecording={() => void handleStartRecording(null, "simulator-tab")}
           onOpenLiveDevice={() => setLiveDeviceOpen(true)}
+          onOpenInspector={() => {
+            setInspectorOpen(true);
+            handleRefreshAudit();
+          }}
+          onOpenCommandPalette={() => setCommandOpen(true)}
+          hasQaIssues={hasQaIssues}
           onChangeAppearance={handleChangeAppearance}
           onToggleOsChrome={() => setShowOsChrome((o) => !o)}
           onToggleZenMode={() => setZenMode(true)}
         />
+
+      {/* Command Palette (Ctrl+Shift+P) */}
+      <CommandPalette
+        isOpen={commandOpen}
+        devices={devices}
+        presets={PRESET_GROUPS}
+        actions={commandActions}
+        onSelectDevice={handleSelectDevice}
+        onSelectTheme={(id) => handleChangeAppearance({ backdrop: id })}
+        onApplyPreset={handleApplyPreset}
+        onSelectVision={(id) => {
+          setVisionFilter(id);
+          pushToast(`Vision Simulator: ${VISION_FILTERS[id].label}`, "info");
+        }}
+        onClose={() => setCommandOpen(false)}
+      />
+
+      {/* Page Inspector, DNA, SEO, Live CSS, Figma Comp & QA Report Drawer */}
+      <PageInspectorDrawer
+        isOpen={inspectorOpen}
+        audit={primaryAudit}
+        activeDeviceNames={activeInstances
+          .map((i) => deviceMap.get(i.deviceId)?.name)
+          .filter((n): n is string => Boolean(n))}
+        customCss={customCss}
+        designOverlay={designOverlay}
+        onClose={() => setInspectorOpen(false)}
+        onRefreshAudit={handleRefreshAudit}
+        onCustomCssChange={setCustomCss}
+        onDesignOverlayChange={(patch) =>
+          setDesignOverlay((prev) => ({ ...prev, ...patch }))
+        }
+        onToast={pushToast}
+      />
 
       {/* Run on Live Physical Device Modal */}
       <LiveDeviceModal

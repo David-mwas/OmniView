@@ -23,8 +23,196 @@
   let lastReportedUrl = window.location.href;
   let urlPollInterval: number | null = null;
   let xrayEnabled = false;
+  let touchAuditEnabled = false;
+  let clsScore = 0;
+  const consoleErrors: string[] = [];
 
   const XRAY_STYLE_ID = "__omniview_xray_style__";
+  const TOUCH_STYLE_ID = "__omniview_touch_audit_style__";
+  const CUSTOM_CSS_ID = "__omniview_custom_css__";
+
+  // Capture runtime errors & unhandled rejections cleanly without chrome.debugger
+  window.addEventListener("error", (ev) => {
+    const msg = ev.message || "Script error";
+    consoleErrors.push(msg.slice(0, 140));
+    if (consoleErrors.length > 20) consoleErrors.shift();
+  });
+  window.addEventListener("unhandledrejection", (ev) => {
+    const msg =
+      ev.reason instanceof Error
+        ? ev.reason.message
+        : String(ev.reason ?? "Unhandled promise rejection");
+    consoleErrors.push(msg.slice(0, 140));
+    if (consoleErrors.length > 20) consoleErrors.shift();
+  });
+
+  // Track Cumulative Layout Shift (CLS) if supported
+  try {
+    if (typeof PerformanceObserver !== "undefined") {
+      const po = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          const ls = entry as PerformanceEntry & {
+            value?: number;
+            hadRecentInput?: boolean;
+          };
+          if (!ls.hadRecentInput && typeof ls.value === "number") {
+            clsScore += ls.value;
+          }
+        }
+      });
+      po.observe({ type: "layout-shift", buffered: true });
+    }
+  } catch {
+    // ignore unsupported entry types
+  }
+
+  function rgbToHex(rgb: string): string | null {
+    const m = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/);
+    if (!m) return null;
+    if (m[4] !== undefined && Number(m[4]) === 0) return null;
+    const hex = [Number(m[1]), Number(m[2]), Number(m[3])]
+      .map((n) => n.toString(16).padStart(2, "0"))
+      .join("");
+    return `#${hex.toLowerCase()}`;
+  }
+
+  function applyTouchAudit(enabled: boolean): number {
+    touchAuditEnabled = enabled;
+    const existing = document.getElementById(TOUCH_STYLE_ID);
+    document
+      .querySelectorAll("[data-omniview-small-tap]")
+      .forEach((el) => el.removeAttribute("data-omniview-small-tap"));
+
+    const interactives = document.querySelectorAll<HTMLElement>(
+      'a[href], button, [role="button"], input:not([type="hidden"]), select'
+    );
+    let smallCount = 0;
+    interactives.forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0 && (rect.width < 44 || rect.height < 44)) {
+        smallCount++;
+        if (enabled) {
+          el.setAttribute("data-omniview-small-tap", "true");
+        }
+      }
+    });
+
+    if (!enabled) {
+      existing?.remove();
+    } else if (!existing) {
+      const style = document.createElement("style");
+      style.id = TOUCH_STYLE_ID;
+      style.textContent = `
+        [data-omniview-small-tap="true"] {
+          outline: 2px dashed #f59e0b !important;
+          outline-offset: 1px !important;
+        }
+      `;
+      (document.head || document.documentElement).appendChild(style);
+    }
+    return smallCount;
+  }
+
+  function applyCustomCss(css: string) {
+    let el = document.getElementById(CUSTOM_CSS_ID) as HTMLStyleElement | null;
+    if (!css.trim()) {
+      el?.remove();
+      return;
+    }
+    if (!el) {
+      el = document.createElement("style");
+      el.id = CUSTOM_CSS_ID;
+      (document.head || document.documentElement).appendChild(el);
+    }
+    el.textContent = css;
+  }
+
+  function applyA11yStress(rtl: boolean, textScale: number) {
+    document.documentElement.dir = rtl ? "rtl" : "";
+    document.documentElement.style.fontSize =
+      textScale !== 1 ? `${Math.round(textScale * 100)}%` : "";
+  }
+
+  function collectPageAudit() {
+    const getMeta = (sel: string) =>
+      document.querySelector<HTMLMetaElement>(sel)?.content?.trim() ?? "";
+
+    const faviconHref =
+      document.querySelector<HTMLLinkElement>('link[rel*="icon"]')?.href ?? "";
+
+    const fontSet = new Set<string>();
+    const colorCounts = new Map<string, number>();
+
+    const sampleNodes = Array.from(
+      document.querySelectorAll("body, h1, h2, h3, p, a, button, header, nav, section")
+    ).slice(0, 120);
+
+    for (const node of sampleNodes) {
+      const cs = window.getComputedStyle(node);
+      const primaryFont = cs.fontFamily
+        .split(",")[0]
+        ?.replace(/['"]/g, "")
+        .trim();
+      if (primaryFont) fontSet.add(primaryFont);
+
+      const fg = rgbToHex(cs.color);
+      if (fg) colorCounts.set(fg, (colorCounts.get(fg) ?? 0) + 1);
+      const bg = rgbToHex(cs.backgroundColor);
+      if (bg) colorCounts.set(bg, (colorCounts.get(bg) ?? 0) + 2);
+    }
+
+    const topColors = Array.from(colorCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([hex]) => hex);
+
+    const imgs = Array.from(document.querySelectorAll("img"));
+    const brokenImages = imgs.filter(
+      (img) => img.complete && img.naturalWidth === 0
+    ).length;
+
+    const smallTouchTargets = applyTouchAudit(touchAuditEnabled);
+    const docEl = document.documentElement;
+    const body = document.body;
+    const clientWidth = docEl?.clientWidth || window.innerWidth || 1;
+    const scrollWidth = Math.max(docEl?.scrollWidth ?? 0, body?.scrollWidth ?? 0);
+    const overflowPx = Math.max(0, Math.round(scrollWidth - clientWidth));
+
+    let loadTimeMs = 0;
+    try {
+      const nav = performance.getEntriesByType("navigation")[0] as
+        | PerformanceNavigationTiming
+        | undefined;
+      if (nav && nav.loadEventEnd > 0) {
+        loadTimeMs = Math.round(nav.loadEventEnd - nav.startTime);
+      } else if (nav && nav.domContentLoadedEventEnd > 0) {
+        loadTimeMs = Math.round(nav.domContentLoadedEventEnd - nav.startTime);
+      }
+    } catch {
+      // ignore
+    }
+
+    return {
+      url: window.location.href,
+      title: document.title || window.location.hostname,
+      description: getMeta('meta[name="description"]'),
+      ogTitle: getMeta('meta[property="og:title"]'),
+      ogDescription: getMeta('meta[property="og:description"]'),
+      ogImage: getMeta('meta[property="og:image"]'),
+      favicon: faviconHref,
+      fonts: Array.from(fontSet).slice(0, 8),
+      colors: topColors,
+      brokenImages,
+      smallTouchTargets,
+      domNodes: document.getElementsByTagName("*").length,
+      imageCount: imgs.length,
+      loadTimeMs,
+      cls: Number(clsScore.toFixed(3)),
+      overflowPx,
+      consoleErrors: [...consoleErrors],
+      updatedAt: Date.now(),
+    };
+  }
 
   function applyXray(enabled: boolean) {
     xrayEnabled = enabled;
@@ -327,7 +515,25 @@
           lastReportedUrl = window.location.href;
           startUrlWatcher();
           applyXray(Boolean(data.xrayMode));
-          window.setTimeout(reportOverflowStatus, 180);
+          if (typeof data.customCss === "string" && data.customCss.trim()) {
+            applyCustomCss(data.customCss);
+          }
+          if (data.rtlMode || (typeof data.textScale === "number" && data.textScale !== 1)) {
+            applyA11yStress(Boolean(data.rtlMode), Number(data.textScale) || 1);
+          }
+          if (data.touchAudit) {
+            applyTouchAudit(true);
+          }
+          window.setTimeout(() => {
+            reportOverflowStatus();
+            if (instanceId) {
+              postToParent({
+                type: "OMNIVIEW_AUDIT_RESULT",
+                instanceId,
+                audit: collectPageAudit(),
+              });
+            }
+          }, 260);
 
           postToParent({
             type: "OMNIVIEW_READY",
@@ -363,6 +569,40 @@
       case "OMNIVIEW_SET_XRAY": {
         applyXray(Boolean(data.enabled));
         reportOverflowStatus();
+        break;
+      }
+
+      case "OMNIVIEW_SET_TOUCH_AUDIT": {
+        applyTouchAudit(Boolean(data.enabled));
+        if (instanceId) {
+          postToParent({
+            type: "OMNIVIEW_AUDIT_RESULT",
+            instanceId,
+            audit: collectPageAudit(),
+          });
+        }
+        break;
+      }
+
+      case "OMNIVIEW_SET_CUSTOM_CSS": {
+        applyCustomCss(String(data.css ?? ""));
+        break;
+      }
+
+      case "OMNIVIEW_SET_A11Y_STRESS": {
+        applyA11yStress(Boolean(data.rtl), Number(data.textScale) || 1);
+        window.setTimeout(reportOverflowStatus, 100);
+        break;
+      }
+
+      case "OMNIVIEW_RUN_AUDIT": {
+        if (instanceId) {
+          postToParent({
+            type: "OMNIVIEW_AUDIT_RESULT",
+            instanceId,
+            audit: collectPageAudit(),
+          });
+        }
         break;
       }
 

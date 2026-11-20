@@ -10,6 +10,8 @@ import {
   Unlink2,
   ZoomIn,
   QrCode,
+  Activity,
+  Command,
 } from "lucide-react";
 import type { StudioAppearance } from "../../types/theme";
 import type { RecordingState } from "../../features/recording/screenRecorder";
@@ -30,6 +32,9 @@ interface FloatingRailProps {
   onOpenStudioCapture: () => void;
   onStartRecording: () => void;
   onOpenLiveDevice: () => void;
+  onOpenInspector: () => void;
+  onOpenCommandPalette: () => void;
+  hasQaIssues?: boolean;
   onChangeAppearance: (patch: Partial<StudioAppearance>) => void;
   onToggleOsChrome: () => void;
   onToggleZenMode: () => void;
@@ -50,6 +55,9 @@ export const FloatingRail: React.FC<FloatingRailProps> = ({
   onOpenStudioCapture,
   onStartRecording,
   onOpenLiveDevice,
+  onOpenInspector,
+  onOpenCommandPalette,
+  hasQaIssues = false,
   onChangeAppearance,
   onToggleOsChrome,
   onToggleZenMode,
@@ -131,6 +139,25 @@ export const FloatingRail: React.FC<FloatingRailProps> = ({
         title="Run on Live Physical Device (QR Code)"
       >
         <QrCode className="h-4 w-4" />
+      </button>
+
+      <button
+        onClick={onOpenInspector}
+        className={`${btnBase} relative text-zinc-500 hover:bg-indigo-500/15 hover:text-indigo-500 dark:text-zinc-400 dark:hover:text-indigo-300`}
+        title="Page Inspector, DNA, SEO, Live CSS & QA Report"
+      >
+        <Activity className="h-4 w-4" />
+        {hasQaIssues && (
+          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-amber-400 ring-2 ring-zinc-900" />
+        )}
+      </button>
+
+      <button
+        onClick={onOpenCommandPalette}
+        className={`${btnBase} text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white`}
+        title="Command Palette (Ctrl+Shift+P)"
+      >
+        <Command className="h-4 w-4" />
       </button>
 
       <div className="my-0.5 h-px w-5 bg-zinc-200 dark:bg-zinc-800" />

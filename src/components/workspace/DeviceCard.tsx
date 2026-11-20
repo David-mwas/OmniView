@@ -20,6 +20,8 @@ import { FrameRenderer } from "../frames/FrameRenderer";
 import { getBreakpointInfo } from "../../utils/breakpoints";
 import { PixelRuler } from "../../features/devtools/PixelRuler";
 import { TvOverscanOverlay } from "../../features/devtools/TvToolsOverlay";
+import { ViewportOverlays } from "../../features/devtools/ViewportOverlays";
+import type { DesignOverlayConfig, TiltMode } from "../../types/devtools";
 
 interface DeviceCardProps {
   index: number;
@@ -40,8 +42,22 @@ interface DeviceCardProps {
   hoverLift: boolean;
   isExiting?: boolean;
   xrayMode: boolean;
+  touchAudit: boolean;
+  customCss: string;
+  rtlMode: boolean;
+  textScale: number;
   visionFilterCss: string;
   overflowPx: number;
+  brokenImages?: number;
+  showColumnGrid: boolean;
+  showSafeArea: boolean;
+  showKeyboard: boolean;
+  designOverlay: DesignOverlayConfig;
+  tiltMode: TiltMode;
+  freeformResize: boolean;
+  dualUrlMode: boolean;
+  overrideUrl?: string;
+  onOverrideUrlChange?: (instanceId: string, url: string) => void;
   onHistoryBack: (instanceId: string) => void;
   onHistoryForward: (instanceId: string) => void;
   onOpenLiveDevice: () => void;
@@ -80,8 +96,22 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   hoverLift,
   isExiting = false,
   xrayMode,
+  touchAudit,
+  customCss,
+  rtlMode,
+  textScale,
   visionFilterCss,
   overflowPx,
+  brokenImages = 0,
+  showColumnGrid,
+  showSafeArea,
+  showKeyboard,
+  designOverlay,
+  tiltMode,
+  freeformResize,
+  dualUrlMode,
+  overrideUrl,
+  onOverrideUrlChange,
   onHistoryBack,
   onHistoryForward,
   onOpenLiveDevice,
@@ -100,7 +130,9 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   const viewportWrapperRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [touchPos, setTouchPos] = useState<{ x: number; y: number } | null>(null);
-  const [iframeSrc, setIframeSrc] = useState<string>(liveUrl || url);
+  const [iframeSrc, setIframeSrc] = useState<string>(overrideUrl || liveUrl || url);
+  const [dualInput, setDualInput] = useState<string>(overrideUrl || liveUrl || url);
+  const [customWidth, setCustomWidth] = useState<number | null>(null);
   const prevUrlRef = useRef<string>(url);
   const prevOrientRef = useRef(instance.orientation);
   const prevReloadRef = useRef(instance.reloadKey);
@@ -108,11 +140,23 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   const [reloadPulse, setReloadPulse] = useState(false);
 
   useEffect(() => {
-    if (prevUrlRef.current !== url) {
+    if (!freeformResize) setCustomWidth(null);
+  }, [freeformResize]);
+
+  useEffect(() => {
+    if (overrideUrl) {
+      setIframeSrc(overrideUrl);
+      setDualInput(overrideUrl);
+    }
+  }, [overrideUrl]);
+
+  useEffect(() => {
+    if (!dualUrlMode && prevUrlRef.current !== url) {
       prevUrlRef.current = url;
       setIframeSrc(url);
+      setDualInput(url);
     }
-  }, [url]);
+  }, [url, dualUrlMode]);
 
   useEffect(() => {
     if (prevOrientRef.current !== instance.orientation) {
@@ -146,7 +190,11 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         syncScroll,
         syncInteractions: syncScroll,
         xrayMode,
-        currentUrl: liveUrl,
+        touchAudit,
+        customCss,
+        rtlMode,
+        textScale,
+        currentUrl: overrideUrl || liveUrl,
       },
       "*"
     );
@@ -159,8 +207,25 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 
   const nativeLandscape = device.viewport.width >= device.viewport.height;
   const shouldSwap = isLandscape !== nativeLandscape;
-  const viewWidth = shouldSwap ? device.viewport.height : device.viewport.width;
+  const baseWidth = shouldSwap ? device.viewport.height : device.viewport.width;
+  const viewWidth = customWidth ?? baseWidth;
   const viewHeight = shouldSwap ? device.viewport.width : device.viewport.height;
+
+  const handleResizeDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = viewWidth;
+    const onMove = (mv: MouseEvent) => {
+      const delta = (mv.clientX - startX) / Math.max(scale, 0.2);
+      setCustomWidth(Math.min(1920, Math.max(280, Math.round(startW + delta))));
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
 
   const bp = getBreakpointInfo(viewWidth);
 
@@ -235,6 +300,14 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                   title={`Horizontal overflow detected: page is ${overflowPx}px wider than this ${viewWidth}px viewport! Enable X-Ray Outlines to highlight the offending element.`}
                 >
                   <AlertTriangle className="h-2.5 w-2.5" />+{overflowPx}px
+                </span>
+              )}
+              {brokenImages > 0 && (
+                <span
+                  className="rounded border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-amber-400"
+                  title={`${brokenImages} broken image(s) detected on this page`}
+                >
+                  {brokenImages} broken img
                 </span>
               )}
               {!minimalHeader && (
@@ -401,7 +474,32 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         </div>
       )}
 
-      {/* Scaled Viewport Container with Optional Ambient Glow */}
+      {/* Dual-URL Staging vs Prod per-device address bar */}
+      {!zenMode && dualUrlMode && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onOverrideUrlChange?.(instance.instanceId, dualInput);
+          }}
+          className="mb-2 flex w-full max-w-[440px] items-center gap-1"
+        >
+          <input
+            type="text"
+            value={dualInput}
+            onChange={(e) => setDualInput(e.target.value)}
+            placeholder="Custom URL for this device (e.g. staging vs prod)"
+            className="flex-1 rounded-lg border border-indigo-500/40 bg-zinc-900/90 px-2.5 py-1 font-mono text-[11px] text-zinc-100 outline-none focus:border-indigo-400"
+          />
+          <button
+            type="submit"
+            className="micro-btn rounded-lg bg-indigo-600 px-2.5 py-1 text-[10px] font-semibold text-white hover:bg-indigo-500"
+          >
+            Go
+          </button>
+        </form>
+      )}
+
+      {/* Scaled Viewport Container with Optional Ambient Glow & 3D Tilt */}
       <div
         className="device-spring relative flex items-start justify-center"
         style={{ width: scaledBoxWidth, height: scaledBoxHeight }}
@@ -423,7 +521,13 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 : ""
           } ${reloadPulse ? "animate-reload-pulse" : ""}`}
           style={{
-            transform: `scale(${scale})`,
+            transform: `${
+              tiltMode === "left"
+                ? "perspective(1400px) rotateY(14deg) rotateX(2deg) "
+                : tiltMode === "right"
+                  ? "perspective(1400px) rotateY(-14deg) rotateX(2deg) "
+                  : ""
+            }scale(${scale})`,
             transformOrigin: "top center",
           }}
         >
@@ -474,6 +578,16 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 
               {showRuler && <PixelRuler width={viewWidth} height={viewHeight} />}
 
+              <ViewportOverlays
+                width={viewWidth}
+                isPhone={isPhone}
+                isIos={device.brand.toLowerCase() === "apple"}
+                showColumnGrid={showColumnGrid}
+                showSafeArea={showSafeArea}
+                showKeyboard={showKeyboard}
+                designOverlay={designOverlay}
+              />
+
               {isTv && <TvOverscanOverlay visible={Boolean(instance.showOverscan)} />}
 
               {/* Touch cursor indicator */}
@@ -486,6 +600,17 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             </div>
           </FrameRenderer>
         </div>
+
+        {/* Freeform Drag Resize Handle */}
+        {freeformResize && !zenMode && (
+          <div
+            onMouseDown={handleResizeDragStart}
+            className="absolute -right-3 top-1/2 z-30 flex h-16 w-3 -translate-y-1/2 cursor-ew-resize items-center justify-center rounded-full border border-indigo-400/60 bg-indigo-600/80 shadow-lg hover:bg-indigo-500"
+            title="Drag horizontally to free-resize viewport width"
+          >
+            <div className="h-6 w-0.5 rounded-full bg-white/80" />
+          </div>
+        )}
       </div>
     </div>
   );

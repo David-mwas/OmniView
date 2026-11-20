@@ -5,7 +5,8 @@ export type VisionFilterId =
   | "tritanopia"
   | "achromatopsia"
   | "blurred"
-  | "low_contrast";
+  | "low_contrast"
+  | "battery_saver";
 
 export interface VisionFilterMeta {
   id: VisionFilterId;
@@ -53,10 +54,45 @@ export const VISION_FILTERS: Record<VisionFilterId, VisionFilterMeta> = {
   },
   low_contrast: {
     id: "low_contrast",
-    label: "Low Contrast / Glare",
-    description: "Simulates bright outdoor sunlight & contrast loss",
-    cssFilter: "contrast(0.55) brightness(1.12)",
+    label: "Sunlight Glare / Low Contrast",
+    description: "Simulates harsh outdoor sunlight & washed-out contrast",
+    cssFilter: "contrast(0.55) brightness(1.18)",
+  },
+  battery_saver: {
+    id: "battery_saver",
+    label: "Battery Saver / Low Light",
+    description: "Simulates dimmed screen brightness for night / power-saving",
+    cssFilter: "brightness(0.58) contrast(0.95)",
   },
 };
 
 export type CompareLayoutMode = "grid" | "row";
+export type TiltMode = "flat" | "left" | "right";
+export type TextScaleOption = 1 | 1.25 | 1.5 | 2;
+
+export interface DesignOverlayConfig {
+  dataUrl: string | null;
+  opacity: number;
+  blendMode: "normal" | "difference";
+}
+
+export interface PageAuditData {
+  url: string;
+  title: string;
+  description: string;
+  ogTitle: string;
+  ogDescription: string;
+  ogImage: string;
+  favicon: string;
+  fonts: string[];
+  colors: string[];
+  brokenImages: number;
+  smallTouchTargets: number;
+  domNodes: number;
+  imageCount: number;
+  loadTimeMs: number;
+  cls: number;
+  overflowPx: number;
+  consoleErrors: string[];
+  updatedAt: number;
+}

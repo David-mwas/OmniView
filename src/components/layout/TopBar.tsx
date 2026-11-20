@@ -34,12 +34,25 @@ import {
   Eye,
   BoxSelect,
   Columns,
+  Keyboard,
+  Shield,
+  Grid3X3,
+  Pointer,
+  SplitSquareHorizontal,
+  Box,
+  MoveHorizontal,
+  Share2,
+  Images,
+  Command,
+  Activity,
 } from "lucide-react";
 import type { PresetGroup, SharedUAPreset, Workspace } from "../../types/device";
 import type { StudioAppearance } from "../../types/theme";
 import {
   VISION_FILTERS,
   type CompareLayoutMode,
+  type TextScaleOption,
+  type TiltMode,
   type VisionFilterId,
 } from "../../types/devtools";
 import { SHARED_USER_AGENTS } from "../../data/devices";
@@ -70,6 +83,16 @@ interface TopBarProps {
   showRuler: boolean;
   touchCursor: boolean;
   xrayMode: boolean;
+  touchAudit: boolean;
+  rtlMode: boolean;
+  textScale: TextScaleOption;
+  showColumnGrid: boolean;
+  showSafeArea: boolean;
+  showKeyboard: boolean;
+  tiltMode: TiltMode;
+  freeformResize: boolean;
+  dualUrlMode: boolean;
+  hasQaIssues: boolean;
   visionFilter: VisionFilterId;
   compareLayout: CompareLayoutMode;
   theme: "dark" | "light";
@@ -84,6 +107,19 @@ interface TopBarProps {
   onHistoryBack: () => void;
   onHistoryForward: () => void;
   onToggleXray: () => void;
+  onToggleTouchAudit: () => void;
+  onToggleRtl: () => void;
+  onCycleTextScale: () => void;
+  onToggleColumnGrid: () => void;
+  onToggleSafeArea: () => void;
+  onToggleKeyboard: () => void;
+  onCycleTilt: () => void;
+  onToggleFreeformResize: () => void;
+  onToggleDualUrl: () => void;
+  onBatchCaptureAll: () => void;
+  onShareWorkspace: () => void;
+  onOpenCommandPalette: () => void;
+  onOpenInspector: () => void;
   onVisionFilterChange: (filter: VisionFilterId) => void;
   onToggleCompareLayout: () => void;
   onOpenLiveDevice: () => void;
@@ -137,6 +173,16 @@ export const TopBar: React.FC<TopBarProps> = ({
   showRuler,
   touchCursor,
   xrayMode,
+  touchAudit,
+  rtlMode,
+  textScale,
+  showColumnGrid,
+  showSafeArea,
+  showKeyboard,
+  tiltMode,
+  freeformResize,
+  dualUrlMode,
+  hasQaIssues,
   visionFilter,
   compareLayout,
   theme,
@@ -151,6 +197,19 @@ export const TopBar: React.FC<TopBarProps> = ({
   onHistoryBack,
   onHistoryForward,
   onToggleXray,
+  onToggleTouchAudit,
+  onToggleRtl,
+  onCycleTextScale,
+  onToggleColumnGrid,
+  onToggleSafeArea,
+  onToggleKeyboard,
+  onCycleTilt,
+  onToggleFreeformResize,
+  onToggleDualUrl,
+  onBatchCaptureAll,
+  onShareWorkspace,
+  onOpenCommandPalette,
+  onOpenInspector,
   onVisionFilterChange,
   onToggleCompareLayout,
   onOpenLiveDevice,
@@ -369,6 +428,28 @@ export const TopBar: React.FC<TopBarProps> = ({
           <option value="1">100%</option>
         </select>
 
+        {/* Command Palette Button */}
+        <button
+          onClick={onOpenCommandPalette}
+          className="micro-btn hidden md:flex items-center gap-1 rounded-lg border border-zinc-300 px-2 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+          title="Open Command Palette (Ctrl+Shift+P)"
+        >
+          <Command className="h-3.5 w-3.5" />
+          <span className="font-mono text-[10px]">⌘P</span>
+        </button>
+
+        {/* Page Inspector & QA Drawer Button */}
+        <button
+          onClick={onOpenInspector}
+          className="micro-btn relative rounded-lg border border-zinc-300 p-1.5 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+          title="Page Inspector (DNA Fonts/Colors, SEO Card, Live CSS, Figma Overlay & QA Report)"
+        >
+          <Activity className="h-3.5 w-3.5" />
+          {hasQaIssues && (
+            <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-400" />
+          )}
+        </button>
+
         {/* Studio Theme & Effects Popover */}
         <div className="relative">
           <button
@@ -464,18 +545,33 @@ export const TopBar: React.FC<TopBarProps> = ({
 
           {/* Compare Layout Mode (Grid vs Side-by-Side Row Strip) */}
           {viewMode === "multi" && (
-            <button
-              onClick={onToggleCompareLayout}
-              className={`micro-btn flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium ${
-                compareLayout === "row"
-                  ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-500 dark:text-indigo-300"
-                  : "border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
-              }`}
-              title="Toggle Comparison Layout: Grid Wrap vs Horizontal Side-by-Side Row"
-            >
-              <Columns className="h-3.5 w-3.5" />
-              <span>{compareLayout === "row" ? "Row Strip" : "Grid"}</span>
-            </button>
+            <>
+              <button
+                onClick={onToggleCompareLayout}
+                className={`micro-btn flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium ${
+                  compareLayout === "row"
+                    ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-500 dark:text-indigo-300"
+                    : "border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                }`}
+                title="Toggle Comparison Layout: Grid Wrap vs Horizontal Side-by-Side Row"
+              >
+                <Columns className="h-3.5 w-3.5" />
+                <span>{compareLayout === "row" ? "Row Strip" : "Grid"}</span>
+              </button>
+
+              <button
+                onClick={onToggleDualUrl}
+                className={`micro-btn flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium ${
+                  dualUrlMode
+                    ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-500 dark:text-indigo-300"
+                    : "border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                }`}
+                title="Compare 2 URLs (Staging vs Production) side-by-side"
+              >
+                <SplitSquareHorizontal className="h-3.5 w-3.5" />
+                <span>Dual URL</span>
+              </button>
+            </>
           )}
 
           {/* Opt-in Compatibility Mode */}
@@ -981,6 +1077,128 @@ export const TopBar: React.FC<TopBarProps> = ({
             title="X-Ray Mode: Outline all DOM boxes & highlight horizontal overflow elements in red"
           >
             <BoxSelect className="h-3.5 w-3.5" />
+          </button>
+
+          {/* Touch Target (<44px) Auditor */}
+          <button
+            onClick={onToggleTouchAudit}
+            className={`micro-btn rounded-lg border p-1.5 ${
+              touchAudit
+                ? "border-amber-500/50 bg-amber-500/15 text-amber-400"
+                : "border-zinc-300 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            }`}
+            title="Touch Target Auditor: Highlight buttons/links smaller than 44×44px"
+          >
+            <Pointer className="h-3.5 w-3.5" />
+          </button>
+
+          {/* Virtual Mobile Keyboard */}
+          <button
+            onClick={onToggleKeyboard}
+            className={`micro-btn rounded-lg border p-1.5 ${
+              showKeyboard
+                ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-400"
+                : "border-zinc-300 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            }`}
+            title="Toggle On-Screen Virtual Mobile Keyboard (Occlusion Test)"
+          >
+            <Keyboard className="h-3.5 w-3.5" />
+          </button>
+
+          {/* Safe-Area Guides */}
+          <button
+            onClick={onToggleSafeArea}
+            className={`micro-btn rounded-lg border p-1.5 ${
+              showSafeArea
+                ? "border-amber-500/50 bg-amber-500/15 text-amber-400"
+                : "border-zinc-300 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            }`}
+            title="Toggle Mobile Safe-Area & Notch Collision Guides"
+          >
+            <Shield className="h-3.5 w-3.5" />
+          </button>
+
+          {/* Figma Column Grid */}
+          <button
+            onClick={onToggleColumnGrid}
+            className={`micro-btn rounded-lg border p-1.5 ${
+              showColumnGrid
+                ? "border-rose-500/50 bg-rose-500/15 text-rose-400"
+                : "border-zinc-300 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            }`}
+            title="Toggle 4/8/12-Column Layout Grid Overlay"
+          >
+            <Grid3X3 className="h-3.5 w-3.5" />
+          </button>
+
+          {/* RTL Flip */}
+          <button
+            onClick={onToggleRtl}
+            className={`micro-btn rounded-lg border px-1.5 py-1 font-mono text-[10px] font-semibold ${
+              rtlMode
+                ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-400"
+                : "border-zinc-300 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            }`}
+            title="Toggle Right-to-Left (RTL) Layout Stress Test"
+          >
+            RTL
+          </button>
+
+          {/* OS Accessibility Text Scale */}
+          <button
+            onClick={onCycleTextScale}
+            className={`micro-btn rounded-lg border px-1.5 py-1 font-mono text-[10px] font-semibold ${
+              textScale !== 1
+                ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-400"
+                : "border-zinc-300 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            }`}
+            title="Cycle OS Accessibility Text Scaling (100% / 125% / 150% / 200%)"
+          >
+            {Math.round(textScale * 100)}%
+          </button>
+
+          {/* 3D Perspective Showcase Tilt */}
+          <button
+            onClick={onCycleTilt}
+            className={`micro-btn rounded-lg border p-1.5 ${
+              tiltMode !== "flat"
+                ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-400"
+                : "border-zinc-300 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            }`}
+            title={`3D Perspective Showcase Tilt (${tiltMode})`}
+          >
+            <Box className="h-3.5 w-3.5" />
+          </button>
+
+          {/* Freeform Drag Resize */}
+          <button
+            onClick={onToggleFreeformResize}
+            className={`micro-btn rounded-lg border p-1.5 ${
+              freeformResize
+                ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-400"
+                : "border-zinc-300 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            }`}
+            title="Toggle Freeform Viewport Width Drag Handle"
+          >
+            <MoveHorizontal className="h-3.5 w-3.5" />
+          </button>
+
+          {/* Batch Capture All Devices */}
+          <button
+            onClick={onBatchCaptureAll}
+            className="micro-btn rounded-lg border border-zinc-300 p-1.5 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            title="Batch Capture All Active Devices Individually"
+          >
+            <Images className="h-3.5 w-3.5" />
+          </button>
+
+          {/* Share Workspace Code */}
+          <button
+            onClick={onShareWorkspace}
+            className="micro-btn rounded-lg border border-zinc-300 p-1.5 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            title="Copy Shareable Workspace Link"
+          >
+            <Share2 className="h-3.5 w-3.5" />
           </button>
 
           {/* OS Chrome Toggle */}
