@@ -17,8 +17,10 @@
   let syncInteractionsEnabled = false;
   let isApplyingRemoteScroll = false;
   let isApplyingRemoteAction = false;
+  let isNavigatingRemotely = false;
   let remoteGuardTimer: number | null = null;
   let remoteActionTimer: number | null = null;
+  let remoteNavTimer: number | null = null;
   let scrollRaf: number | null = null;
   let lastReportedUrl = window.location.href;
   let urlPollInterval: number | null = null;
@@ -393,6 +395,7 @@
 
   function checkUrlChange() {
     if (!instanceId || !syncInteractionsEnabled) return;
+    if (isApplyingRemoteAction || isNavigatingRemotely) return;
     const current = window.location.href;
     if (normalizeHref(current) !== normalizeHref(lastReportedUrl)) {
       lastReportedUrl = current;
@@ -493,12 +496,15 @@
   document.addEventListener("input", handleLocalInput, true);
   document.addEventListener("change", handleLocalInput, true);
 
-  function setRemoteActionGuard(ms = 140) {
+  function setRemoteActionGuard(ms = 140, syncUrlOnEnd = false) {
     isApplyingRemoteAction = true;
     if (remoteActionTimer !== null) window.clearTimeout(remoteActionTimer);
     remoteActionTimer = window.setTimeout(() => {
       isApplyingRemoteAction = false;
       remoteActionTimer = null;
+      if (syncUrlOnEnd && !isNavigatingRemotely) {
+        lastReportedUrl = window.location.href;
+      }
     }, ms);
   }
 
@@ -540,20 +546,6 @@
             instanceId,
             href: window.location.href,
           });
-
-          // If this iframe just completed an MPA navigation to a different URL than the simulator's current URL, notify parent!
-          if (
-            syncInteractionsEnabled &&
-            typeof data.currentUrl === "string" &&
-            data.currentUrl.length > 0 &&
-            normalizeHref(window.location.href) !== normalizeHref(data.currentUrl)
-          ) {
-            postToParent({
-              type: "OMNIVIEW_NAVIGATED",
-              instanceId,
-              url: window.location.href,
-            });
-          }
         }
         break;
       }
@@ -652,11 +644,59 @@
         if (!targetUrl) return;
         if (normalizeHref(window.location.href) === normalizeHref(targetUrl)) {
           lastReportedUrl = window.location.href;
+          isNavigatingRemotely = false;
+          if (remoteNavTimer !== null) {
+            window.clearTimeout(remoteNavTimer);
+            remoteNavTimer = null;
+          }
+          postToParent({
+            type: "OMNIVIEW_NAV_ACK",
+            instanceId,
+            url: window.location.href,
+          });
           return;
         }
-        setRemoteActionGuard(500);
-        lastReportedUrl = targetUrl;
-        window.location.assign(targetUrl);
+
+        let isSameDocHash = false;
+        try {
+          const cur = new URL(window.location.href);
+          const tgt = new URL(targetUrl, window.location.href);
+          isSameDocHash =
+            cur.origin === tgt.origin &&
+            cur.pathname === tgt.pathname &&
+            cur.search === tgt.search &&
+            cur.hash !== tgt.hash;
+        } catch {
+          isSameDocHash = false;
+        }
+
+        setRemoteActionGuard(500, true);
+        if (isSameDocHash) {
+          lastReportedUrl = targetUrl;
+          window.location.assign(targetUrl);
+          postToParent({
+            type: "OMNIVIEW_NAV_ACK",
+            instanceId,
+            url: window.location.href,
+          });
+        } else {
+          // Keep lastReportedUrl at the current URL and suppress checkUrlChange()
+          // while the asynchronous full-document navigation is in flight so the
+          // 200ms poller never echoes the old URL back to the simulator parent.
+          isNavigatingRemotely = true;
+          if (remoteNavTimer !== null) window.clearTimeout(remoteNavTimer);
+          remoteNavTimer = window.setTimeout(() => {
+            isNavigatingRemotely = false;
+            remoteNavTimer = null;
+            lastReportedUrl = window.location.href;
+          }, 8000);
+          postToParent({
+            type: "OMNIVIEW_NAV_STARTED",
+            instanceId,
+            url: targetUrl,
+          });
+          window.location.assign(targetUrl);
+        }
         break;
       }
 
@@ -684,12 +724,8 @@
         }
 
         if (el) {
-          setRemoteActionGuard(180);
+          setRemoteActionGuard(400, true);
           el.click();
-          // Sync lastReportedUrl after SPA click so we don't bounce an echo
-          window.setTimeout(() => {
-            lastReportedUrl = window.location.href;
-          }, 120);
         }
         break;
       }

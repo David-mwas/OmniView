@@ -61,7 +61,11 @@ interface DeviceCardProps {
   onHistoryBack: (instanceId: string) => void;
   onHistoryForward: (instanceId: string) => void;
   onOpenLiveDevice: () => void;
-  onRegisterIframe: (instanceId: string, iframe: HTMLIFrameElement | null) => void;
+  onRegisterIframe: (
+    instanceId: string,
+    iframe: HTMLIFrameElement | null,
+    initialSrc?: string
+  ) => void;
   onRotate: (instanceId: string) => void;
   onReload: (instanceId: string) => void;
   onToggleFrame: (instanceId: string) => void;
@@ -170,16 +174,20 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   useEffect(() => {
     if (prevReloadRef.current !== instance.reloadKey) {
       prevReloadRef.current = instance.reloadKey;
+      if (!dualUrlMode && !overrideUrl && liveUrl && liveUrl !== iframeSrc) {
+        setIframeSrc(liveUrl);
+        setDualInput(liveUrl);
+      }
       setReloadPulse(true);
       const t = window.setTimeout(() => setReloadPulse(false), 400);
       return () => window.clearTimeout(t);
     }
-  }, [instance.reloadKey]);
+  }, [instance.reloadKey, dualUrlMode, overrideUrl, liveUrl, iframeSrc]);
 
   useEffect(() => {
-    onRegisterIframe(instance.instanceId, iframeRef.current);
+    onRegisterIframe(instance.instanceId, iframeRef.current, iframeSrc);
     return () => onRegisterIframe(instance.instanceId, null);
-  }, [instance.instanceId, instance.reloadKey, url, onRegisterIframe]);
+  }, [instance.instanceId, instance.reloadKey, iframeSrc, onRegisterIframe]);
 
   const sendHandshake = () => {
     iframeRef.current?.contentWindow?.postMessage(

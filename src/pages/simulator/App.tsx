@@ -45,6 +45,7 @@ import {
 } from "../../stores/storage";
 import { getDemoPageUrl, sendExtensionMessage } from "../../utils/extensionBridge";
 import { normalizeUrl } from "../../utils/breakpoints";
+import { NavSyncCoordinator, type SyncDecision } from "../../utils/navSyncCoordinator";
 import { Sidebar } from "../../components/layout/Sidebar";
 import { TopBar, type ZoomOption } from "../../components/layout/TopBar";
 import { FloatingRail } from "../../components/layout/FloatingRail";
@@ -109,6 +110,7 @@ export const App: React.FC = () => {
   const [activeUrl, setActiveUrl] = useState<string>(initialUrl);
   const [liveUrl, setLiveUrl] = useState<string>(initialUrl);
   const liveUrlRef = useRef<string>(initialUrl);
+  const navSyncRef = useRef<NavSyncCoordinator>(new NavSyncCoordinator(initialUrl));
   const [urlInput, setUrlInput] = useState<string>(
     initialUrl === getDemoPageUrl() ? "" : initialUrl
   );
@@ -204,11 +206,15 @@ export const App: React.FC = () => {
   );
 
   const handleRegisterIframe = useCallback(
-    (instanceId: string, iframe: HTMLIFrameElement | null) => {
+    (instanceId: string, iframe: HTMLIFrameElement | null, initialSrc?: string) => {
       if (iframe) {
         iframeRegistryRef.current.set(instanceId, iframe);
+        if (initialSrc) {
+          navSyncRef.current.registerInstance(instanceId, initialSrc);
+        }
       } else {
         iframeRegistryRef.current.delete(instanceId);
+        navSyncRef.current.unregisterInstance(instanceId);
       }
     },
     []
@@ -216,6 +222,43 @@ export const App: React.FC = () => {
 
   // Live Sync listener + broadcaster across all preview iframes (Scroll, Navigation, Clicks, Inputs)
   useEffect(() => {
+    const applySyncDecision = (decision: SyncDecision) => {
+      if (decision.kind === "none") return;
+
+      if (decision.kind === "navigate_one") {
+        iframeRegistryRef.current
+          .get(decision.targetInstanceId)
+          ?.contentWindow?.postMessage(
+            {
+              __omniview: true,
+              type: "OMNIVIEW_APPLY_NAVIGATE",
+              sourceInstanceId: "__coordinator__",
+              url: decision.url,
+            },
+            "*"
+          );
+        return;
+      }
+
+      liveUrlRef.current = decision.url;
+      setLiveUrl(decision.url);
+      if (/^https?:\/\//i.test(decision.url)) {
+        setUrlInput(decision.url);
+      }
+
+      for (const id of decision.targets) {
+        iframeRegistryRef.current.get(id)?.contentWindow?.postMessage(
+          {
+            __omniview: true,
+            type: "OMNIVIEW_APPLY_NAVIGATE",
+            sourceInstanceId: decision.sourceInstanceId,
+            url: decision.url,
+          },
+          "*"
+        );
+      }
+    };
+
     const onMessage = (ev: MessageEvent) => {
       const data = ev.data;
       if (!data || typeof data !== "object" || data.__omniview !== true) return;
@@ -231,6 +274,40 @@ export const App: React.FC = () => {
         const auditData = data.audit as PageAuditData;
         setAuditMap((prev) => ({ ...prev, [data.instanceId]: auditData }));
         setOverflowMap((prev) => ({ ...prev, [data.instanceId]: auditData.overflowPx }));
+        return;
+      }
+
+      if (
+        data.type === "OMNIVIEW_NAV_STARTED" &&
+        typeof data.instanceId === "string" &&
+        typeof data.url === "string"
+      ) {
+        navSyncRef.current.onNavStarted(data.instanceId, data.url);
+        return;
+      }
+
+      if (
+        data.type === "OMNIVIEW_NAV_ACK" &&
+        typeof data.instanceId === "string" &&
+        typeof data.url === "string"
+      ) {
+        navSyncRef.current.onNavAck(data.instanceId, data.url);
+        return;
+      }
+
+      if (
+        data.type === "OMNIVIEW_READY" &&
+        typeof data.instanceId === "string" &&
+        typeof data.href === "string"
+      ) {
+        const decision = navSyncRef.current.onReady(
+          data.instanceId,
+          data.href,
+          Array.from(iframeRegistryRef.current.keys()),
+          syncScroll,
+          dualUrlMode
+        );
+        applySyncDecision(decision);
         return;
       }
 
@@ -253,29 +330,19 @@ export const App: React.FC = () => {
             "*"
           );
         }
-      } else if (data.type === "OMNIVIEW_NAVIGATED" && typeof data.url === "string") {
-        const nextUrl = data.url;
-        const norm = (u: string) => u.replace(/\/$/, "");
-        if (norm(nextUrl) === norm(liveUrlRef.current)) return;
-
-        liveUrlRef.current = nextUrl;
-        setLiveUrl(nextUrl);
-        if (/^https?:\/\//i.test(nextUrl)) {
-          setUrlInput(nextUrl);
-        }
-
-        for (const [id, iframe] of iframeRegistryRef.current.entries()) {
-          if (id === data.instanceId) continue;
-          iframe.contentWindow?.postMessage(
-            {
-              __omniview: true,
-              type: "OMNIVIEW_APPLY_NAVIGATE",
-              sourceInstanceId: data.instanceId,
-              url: nextUrl,
-            },
-            "*"
-          );
-        }
+      } else if (
+        data.type === "OMNIVIEW_NAVIGATED" &&
+        typeof data.instanceId === "string" &&
+        typeof data.url === "string"
+      ) {
+        const decision = navSyncRef.current.onNavigated(
+          data.instanceId,
+          data.url,
+          Array.from(iframeRegistryRef.current.keys()),
+          syncScroll,
+          dualUrlMode
+        );
+        applySyncDecision(decision);
       } else if (data.type === "OMNIVIEW_CLICK_EVENT") {
         for (const [id, iframe] of iframeRegistryRef.current.entries()) {
           if (id === data.instanceId) continue;
@@ -311,7 +378,7 @@ export const App: React.FC = () => {
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [syncScroll]);
+  }, [syncScroll, dualUrlMode]);
 
   // Notify all iframes whenever syncScroll / Live Sync toggle changes
   useEffect(() => {
@@ -522,6 +589,10 @@ export const App: React.FC = () => {
     const normalized = normalizeUrl(raw);
     if (!normalized) return;
     liveUrlRef.current = normalized;
+    navSyncRef.current.setGlobalUrl(
+      normalized,
+      Array.from(iframeRegistryRef.current.keys())
+    );
     setLiveUrl(normalized);
     setActiveUrl(normalized);
     setUrlInput(normalized);
@@ -534,6 +605,10 @@ export const App: React.FC = () => {
   const handleLoadDemo = () => {
     const demoUrl = getDemoPageUrl();
     liveUrlRef.current = demoUrl;
+    navSyncRef.current.setGlobalUrl(
+      demoUrl,
+      Array.from(iframeRegistryRef.current.keys())
+    );
     setLiveUrl(demoUrl);
     setActiveUrl(demoUrl);
     setUrlInput("");
@@ -696,6 +771,10 @@ export const App: React.FC = () => {
 
   const handleLoadWorkspace = (ws: Workspace) => {
     liveUrlRef.current = ws.url;
+    navSyncRef.current.setGlobalUrl(
+      ws.url,
+      Array.from(iframeRegistryRef.current.keys())
+    );
     setLiveUrl(ws.url);
     setActiveUrl(ws.url);
     setUrlInput(ws.url === getDemoPageUrl() ? "" : ws.url);
