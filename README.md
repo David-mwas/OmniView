@@ -1,8 +1,8 @@
 # OmniView — Universal Device Simulator
 
-**Free, open-source Manifest V3 Chrome Extension (v2.0.0)** for responsive web testing across **both emerging-market devices** (Itel, Tecno, Infinix, Oppo, Xiaomi/Redmi, Huawei, Vivo, Realme, Nokia) and **international flagships** (Apple iPhone, Samsung Galaxy, Google Pixel, OnePlus, Nothing, Motorola, iPads, Laptops, Macs, Ultrawides, and Smart TVs) — with **zero PRO paywalls**.
+**Free, open-source Manifest V3 Chrome Extension (v2.0.1)** for responsive web testing across **both emerging-market devices** (Itel, Tecno, Infinix, Oppo, Xiaomi/Redmi, Huawei, Vivo, Realme, Nokia) and **international flagships** (Apple iPhone, Samsung Galaxy, Google Pixel, OnePlus, Nothing, Motorola, iPads, Laptops, Macs, Ultrawides, and Smart TVs) — with **zero PRO paywalls**.
 
-> **[Download OmniView v2.0.0 Extension (.zip)](https://github.com/David-mwas/OmniView/raw/main/omniview-extension-v2.0.zip)** · **[View Latest GitHub Release (v2.0.0)](https://github.com/David-mwas/OmniView/releases/latest)** — Ready to load unpacked in Chrome, Brave, or Edge in 30 seconds (no Node.js required).
+> **[Download OmniView v2.0.1 Extension (.zip)](https://github.com/David-mwas/OmniView/raw/main/omniview-extension-v2.0.1.zip)** · **[View Latest GitHub Release (v2.0.1)](https://github.com/David-mwas/OmniView/releases/latest)** — Ready to load unpacked in Chrome, Brave, or Edge in 30 seconds (no Node.js required).
 
 ---
 
@@ -32,7 +32,7 @@
 
 ## Quick Install (No Coding Tools Needed)
 
-1. **[Download `omniview-extension-v2.0.zip`](https://github.com/David-mwas/OmniView/raw/main/omniview-extension-v2.0.zip)** (or grab the latest release from **[GitHub Releases](https://github.com/David-mwas/OmniView/releases/latest)**) and **unzip / extract** it into a permanent folder.
+1. **[Download `omniview-extension-v2.0.1.zip`](https://github.com/David-mwas/OmniView/raw/main/omniview-extension-v2.0.1.zip)** (or grab the latest release from **[GitHub Releases](https://github.com/David-mwas/OmniView/releases/latest)**) and **unzip / extract** it into a permanent folder.
 2. Open Chrome (or Brave / Edge) and go to `chrome://extensions`.
 3. Enable **Developer mode** (toggle in the top-right corner).
 4. Click **Load unpacked** (top-left) and select the extracted folder (the one containing `manifest.json`).

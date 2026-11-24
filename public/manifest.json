@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "OmniView — Universal Device Simulator",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Free, open-source responsive studio: 56+ devices, Live Sync, Page DNA/SEO/QA Inspector, Live CSS, Figma Comp Overlay, Vision & X-Ray, Virtual Keyboard, Mockup Studio & MP4 Trim.",
   "minimum_chrome_version": "116",
   "permissions": [
